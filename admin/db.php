@@ -2,7 +2,7 @@
 header("Content-Type: application/json; charset=UTF-8");
 
 $host = "localhost";
-$dbname = "whim_db";
+$dbname = "room-management_db";
 $username = "root";
 $password = "";
 
@@ -17,8 +17,9 @@ try {
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
+
 } catch (PDOException $e) {
-    error_log("WHIM database connection error: " . $e->getMessage());
+    error_log("Database connection error: " . $e->getMessage());
 
     http_response_code(500);
 

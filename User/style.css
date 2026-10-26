@@ -1,73 +1,438 @@
 /* =========================================
-   WHIM — Original Design Styles
+   WHIM — COMPLETE ACCOUNT PAGE DESIGN
    ========================================= */
 
-/* Clean Minimalist Light Glassmorphism */
-.glass-card-light {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(4, 77, 41, 0.08);
-}
-
-/* Dark Glassmorphism */
-.glass-card-dark {
-  background: rgba(4, 77, 41, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-/* Floating Navigation Glass Effect */
-.glass-nav {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(4, 77, 41, 0.1);
-}
-
-/* Grain Overlay Texture */
-.grain-overlay {
-  position: absolute;
-  inset: 0;
+#account-view .account-page {
   width: 100%;
-  height: 100%;
-  opacity: 0.04;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px;
 }
 
-/* Staggered Letter Animation */
-@keyframes letterStagger {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-    filter: blur(10px);
+/* Page heading */
+
+#account-view .account-page-heading {
+  margin-bottom: 26px;
+}
+
+#account-view .account-eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: #168052;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+}
+
+#account-view .account-page-heading h1 {
+  margin: 0;
+  color: #173326;
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+#account-view .account-page-heading p {
+  margin-top: 8px;
+  color: #77857c;
+  font-size: 14px;
+}
+
+/* Profile banner */
+
+#account-view .account-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px;
+  margin-bottom: 26px;
+  color: #ffffff;
+  background: linear-gradient(120deg, #064e35, #08734b);
+  border: 1px solid rgba(4, 77, 41, 0.15);
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(4, 77, 41, 0.12);
+}
+
+#account-view .account-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66px;
+  height: 66px;
+  flex-shrink: 0;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 18px;
+  font-size: 26px;
+}
+
+#account-view .account-profile-text {
+  flex: 1;
+  min-width: 0;
+}
+
+#account-view .account-profile-caption {
+  display: block;
+  margin-bottom: 6px;
+  color: #c4ead4;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+#account-view .account-profile-text h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 25px;
+  font-weight: 750;
+}
+
+#account-view .account-profile-text p {
+  margin: 5px 0 0;
+  color: #d5eee0;
+  font-size: 14px;
+}
+
+/* Login status badge */
+
+#account-view .account-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#account-view .account-status.logged-in {
+  color: #dcfce7;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+#account-view .account-status.logged-out {
+  color: #fee2e2;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Main account sections */
+
+#account-view .account-section {
+  margin-bottom: 24px;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #e8eee9;
+  border-radius: 18px;
+  box-shadow: 0 5px 20px rgba(20, 50, 30, 0.045);
+}
+
+/* Section headings */
+
+#account-view .account-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+#account-view .account-section-heading h2 {
+  margin: 0;
+  color: #172b20;
+  font-size: 22px;
+  font-weight: 750;
+}
+
+#account-view .account-section-heading p {
+  margin: 7px 0 0;
+  color: #829087;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#account-view .account-heading-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  color: #08734b;
+  background: #eaf5ee;
+  border-radius: 14px;
+  font-size: 20px;
+}
+
+/* Personal information cards */
+
+#account-view .account-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  width: 100%;
+}
+
+#account-view .account-info-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+  padding: 19px;
+  background: #f9fbf9;
+  border: 1px solid #e9efea;
+  border-radius: 14px;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+#account-view .account-info-card:hover {
+  background: #f2f9f4;
+  border-color: #b8d9c4;
+  box-shadow: 0 7px 18px rgba(4, 77, 41, 0.07);
+  transform: translateY(-2px);
+}
+
+#account-view .account-info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  color: #08734b;
+  background: #e7f3eb;
+  border-radius: 12px;
+  font-size: 17px;
+}
+
+#account-view .account-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+#account-view .account-info-label {
+  color: #859189;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+#account-view .account-info-value {
+  color: #1c3024;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Logged-out empty state */
+
+#account-view .account-empty-state {
+  grid-column: 1 / -1;
+  padding: 35px 20px;
+  text-align: center;
+  color: #7b8980;
+  background: #f8faf8;
+  border: 1px dashed #d7e2d9;
+  border-radius: 14px;
+}
+
+#account-view .account-empty-state i {
+  display: block;
+  margin-bottom: 12px;
+  color: #8ba997;
+  font-size: 26px;
+}
+
+#account-view .account-empty-state p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Room search preferences */
+
+#account-view .account-building-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 18px;
+  background: #f8faf8;
+  border: 1px solid #e9efea;
+  border-radius: 14px;
+}
+
+#account-view .account-building-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  color: #08734b;
+  background: #e7f3eb;
+  border-radius: 12px;
+  font-size: 18px;
+}
+
+#account-view .account-building-info span {
+  display: block;
+  margin-bottom: 5px;
+  color: #859189;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+#account-view .account-building-info strong {
+  color: #1c3024;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Logout area */
+
+#account-view .account-logout-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 26px;
+  background: #ffffff;
+  border: 1px solid #f0dddd;
+  border-radius: 16px;
+}
+
+#account-view .account-logout-area strong {
+  color: #26352b;
+  font-size: 14px;
+}
+
+#account-view .account-logout-area p {
+  margin-top: 5px;
+  color: #87918a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#account-view .account-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px 18px;
+  color: #b42318;
+  background: #fff5f4;
+  border: 1px solid #f3d1cd;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+#account-view .account-logout-btn:hover {
+  color: #ffffff;
+  background: #c83227;
+  border-color: #c83227;
+}
+
+/* Mobile layout */
+
+@media (max-width: 640px) {
+  #account-view .account-page {
+    padding: 16px 12px;
   }
 
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
+  #account-view .account-profile-card {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 20px;
+    border-radius: 17px;
+  }
+
+  #account-view .account-avatar {
+    width: 54px;
+    height: 54px;
+    font-size: 22px;
+  }
+
+  #account-view .account-profile-text h2 {
+    font-size: 20px;
+  }
+
+  #account-view .account-status {
+    margin-left: auto;
+  }
+
+  #account-view .account-section {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  #account-view .account-section-heading h2 {
+    font-size: 19px;
+  }
+
+  #account-view .account-heading-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 17px;
+  }
+
+  #account-view .account-details-grid {
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
+
+  #account-view .account-info-card {
+    padding: 15px;
+  }
+
+  #account-view .account-info-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  #account-view .account-logout-area {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px;
   }
 }
 
-.stagger-char {
-  display: inline-block;
-  animation: letterStagger 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
+/* =========================================
+   GLASS NAVBAR
+   ========================================= */
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 8px 30px rgba(4, 77, 41, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #fafbfb;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
+/* Older browsers without blur: use a more solid white */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.95);
+  }
 }

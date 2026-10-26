@@ -159,13 +159,18 @@
 
                     <form id="login-form" onsubmit="handleLogin(event)" class="space-y-6">
 
+                        <div id="login-error"
+                            class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3"
+                            role="alert" aria-live="polite">
+                        </div>
+
                         <div>
                             <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-600 mb-2">
                                 Student # / Teacher ID #
                             </label>
 
                             <input type="text" id="user-id" required placeholder="e.g. 2026-10492 or TCH-882"
-                                class="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-sm text-zinc-800 focus:outline-none focus:border-plmun-green focus:ring-2 focus:ring-plmun-green/10 transition-all placeholder:text-zinc-400">
+                                class="login-input w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-sm text-zinc-800 focus:outline-none focus:border-plmun-green focus:ring-2 focus:ring-plmun-green/10 transition-all placeholder:text-zinc-400">
                         </div>
 
                         <div>
@@ -174,7 +179,7 @@
                             </label>
 
                             <input type="password" id="password" required placeholder="••••••••"
-                                class="w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-sm text-zinc-800 focus:outline-none focus:border-plmun-green focus:ring-2 focus:ring-plmun-green/10 transition-all placeholder:text-zinc-400">
+                                class="login-input w-full bg-white border border-zinc-200 rounded-2xl px-5 py-4 text-sm text-zinc-800 focus:outline-none focus:border-plmun-green focus:ring-2 focus:ring-plmun-green/10 transition-all placeholder:text-zinc-400">
                         </div>
 
                         <button type="submit"
@@ -266,6 +271,22 @@
                         <p class="text-emerald-100/80 text-sm sm:text-base mt-4 max-w-xl font-light">
                             Where Values Matter. Seamless real-time classroom search and schedule index.
                         </p>
+
+                        <div class="mt-5 flex flex-wrap items-center gap-3 text-emerald-100">
+                            <div
+                                class="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur-md">
+                                <i class="fa-regular fa-calendar text-emerald-300"></i>
+                                <span id="philippine-date" class="text-xs font-medium">Loading date...</span>
+                            </div>
+
+                            <div
+                                class="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur-md">
+                                <i class="fa-regular fa-clock text-emerald-300"></i>
+                                <span id="philippine-time" class="text-xs font-semibold tabular-nums">Loading
+                                    time...</span>
+                                <span class="text-[9px] uppercase tracking-wider text-emerald-200">PHT</span>
+                            </div>
+                        </div>
 
                     </div>
 
@@ -726,70 +747,94 @@
             <!-- VIEW 4: ACCOUNT SCREEN -->
             <!-- ========================================================= -->
 
+
+            <!-- VIEW 4: ACCOUNT SCREEN -->
             <section id="account-view" class="view-panel hidden flex-col animate-fade-in-up">
 
-                <div
-                    class="glass-card-light rounded-[2.5rem] p-8 sm:p-12 max-w-2xl mx-auto w-full border border-zinc-200 shadow-lg">
+                <div class="account-page">
 
-                    <div class="text-center mb-8">
+                    <!-- PAGE HEADER -->
+                    <div class="account-page-heading">
+                        <span class="account-eyebrow">USER SETTINGS</span>
+                        <h1>My Account</h1>
+                        <p>Manage and view your university account information.</p>
+                    </div>
 
-                        <div
-                            class="w-20 h-20 bg-plmun-green/10 rounded-full border border-plmun-green/20 mx-auto flex items-center justify-center text-3xl text-plmun-green mb-4">
+                    <!-- PROFILE HEADER -->
+                    <div class="account-profile-card">
+                        <div class="account-avatar">
                             <i class="fa-solid fa-user"></i>
                         </div>
 
-                        <h2 id="account-user-id" class="text-2xl font-bold text-zinc-900">
-                            Not Logged In
-                        </h2>
-
-                        <p id="account-user-role"
-                            class="text-xs font-bold tracking-widest uppercase text-zinc-400 mt-1">
-                            Guest Session
-                        </p>
-
-                    </div>
-
-                    <div class="space-y-4 border-t border-zinc-200 pt-6">
-
-                        <div class="flex justify-between items-center py-3 border-b border-zinc-100 text-sm">
-
-                            <span class="text-zinc-500">
-                                Authentication Status
-                            </span>
-
-                            <span id="account-status-badge"
-                                class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600">
-                                Logged Out
-                            </span>
-
+                        <div class="account-profile-text">
+                            <span class="account-profile-caption">ACCOUNT PROFILE</span>
+                            <h2 id="account-user-id">Not Logged In</h2>
+                            <p id="account-user-role">Guest Session</p>
                         </div>
 
-                        <div class="flex justify-between items-center py-3 border-b border-zinc-100 text-sm">
-
-                            <span class="text-zinc-500">
-                                Active Building Selection
-                            </span>
-
-                            <span id="account-active-bldg" class="font-semibold text-zinc-900">
-                                Building A
-                            </span>
-
-                        </div>
-
+                        <span id="account-status-badge" class="account-status logged-out">
+                            Logged Out
+                        </span>
                     </div>
 
-                    <div class="mt-8">
+                    <!-- PERSONAL INFORMATION -->
+                    <div class="account-section">
+                        <div class="account-section-heading">
+                            <div>
+                                <span class="account-eyebrow">PROFILE DETAILS</span>
+                                <h2>Personal Information</h2>
+                                <p>Your registered university information.</p>
+                            </div>
 
-                        <button onclick="handleLogout()"
-                            class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 rounded-full transition-all text-xs tracking-wider uppercase border border-red-200">
+                            <i class="fa-regular fa-id-card account-heading-icon"></i>
+                        </div>
+
+                        <div id="account-details" class="account-details-grid">
+                            <div class="account-empty-state">
+                                <i class="fa-solid fa-lock"></i>
+                                <p>Please log in to view your personal information.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PREFERENCES -->
+                    <div class="account-section account-preferences">
+                        <div class="account-section-heading">
+                            <div>
+                                <span class="account-eyebrow">CURRENT SESSION</span>
+                                <h2>Room Search Preferences</h2>
+                                <p>Your currently selected campus location.</p>
+                            </div>
+                        </div>
+
+                        <div class="account-building-info">
+                            <div class="account-building-icon">
+                                <i class="fa-solid fa-building"></i>
+                            </div>
+
+                            <div>
+                                <span>Active Building</span>
+                                <strong id="account-active-bldg">Building A</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LOGOUT -->
+                    <div class="account-logout-area">
+                        <div>
+                            <strong>Sign out of your account</strong>
+                            <p>You will need to log in again to access your account.</p>
+                        </div>
+
+                        <button onclick="handleLogout()" class="account-logout-btn">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
                             Log Out
                         </button>
-
                     </div>
 
                 </div>
-
             </section>
+
 
         </main>
 
@@ -829,6 +874,71 @@
 
         </footer>
 
+    </div>
+
+    <!-- BOOKING WINDOW -->
+    <div id="booking-modal"
+        class="hidden fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm items-center justify-center p-4"
+        onclick="if (event.target === this) closeBookingModal()">
+
+        <div class="bg-white rounded-[2rem] w-full max-w-md p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+
+            <div class="flex items-start justify-between mb-5">
+                <div>
+                    <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-plmun-green">Book a Room</p>
+                    <h3 id="booking-title" class="text-2xl font-extrabold text-zinc-900">Room</h3>
+                </div>
+                <button type="button" onclick="closeBookingModal()"
+                    class="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600">✕</button>
+            </div>
+
+            <!-- 1. Available time (radio buttons) -->
+            <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2">1. Choose available time</p>
+            <div id="booking-slots" class="space-y-2 mb-5"></div>
+
+            <!-- Shows after a slot is selected -->
+            <div id="booking-details" class="hidden space-y-4">
+
+                <!-- 2. Hours dropdown -->
+                <div>
+                    <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2">
+                        2. How many hours?
+                    </label>
+                    <select id="booking-hours" onchange="applyHours()"
+                        class="w-full border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-plmun-green"></select>
+                </div>
+
+                <!-- 3. Time in and time out -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2">Time
+                            In</label>
+                        <input type="time" id="booking-time-in" oninput="updatePreferred()"
+                            class="w-full border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-plmun-green">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2">Time
+                            Out</label>
+                        <input type="time" id="booking-time-out" oninput="updatePreferred()"
+                            class="w-full border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-plmun-green">
+                    </div>
+                </div>
+
+                <!-- 4. Preferred time -->
+                <div class="rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3">
+                    <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-emerald-700">Preferred Time</p>
+                    <p id="booking-preferred" class="text-lg font-bold text-plmun-green">—</p>
+                </div>
+
+                <p id="booking-error" class="hidden text-sm text-red-600"></p>
+            </div>
+
+            <button id="booking-submit" type="button" onclick="submitBooking()" disabled
+                class="mt-5 w-full bg-plmun-green hover:bg-plmun-lightgreen disabled:bg-zinc-300 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-full py-3 transition-all">
+                Book
+            </button>
+
+        </div>
     </div>
 
 </body>
