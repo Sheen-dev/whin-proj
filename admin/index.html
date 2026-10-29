@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>WHIM | Room Management</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- ADMIN HEADER -->
+    <header class="admin-header">
+        <div>
+            <p class="eyebrow">WHIM ADMINISTRATION</p>
+            <h1>Room Management</h1>
+            <p>Manage rooms and their availability schedules.</p>
+            <p id="todayDate"></p>
+        </div>
+
+        <button class="add-room-btn" type="button"
+            onclick="document.getElementById('addRoomModal').style.display='flex'; document.getElementById('addRoomModal').classList.add('active');">
+            + Add Room
+        </button>
+    </header>
+
+    <main class="admin-content">
+
+        <!-- ROOM STATISTICS -->
+        <section class="admin-stats">
+            <div class="stat-card">
+                <span>Total Rooms</span>
+                <strong id="totalRooms">0</strong>
+            </div>
+
+            <div class="stat-card">
+                <span>Available</span>
+                <strong id="availableRooms">0</strong>
+            </div>
+
+            <div class="stat-card">
+                <span>Unavailable</span>
+                <strong id="unavailableRooms">0</strong>
+            </div>
+        </section>
+
+        <!-- BUILDING SELECTION -->
+        <section class="building-section">
+            <div class="section-header">
+                <div>
+                    <h2>Buildings</h2>
+                    <p>Select a building to manage its rooms.</p>
+                </div>
+            </div>
+
+            <div class="building-tabs">
+                <button class="building-tab active" type="button" data-building="A" onclick="selectBuilding('A')">
+                    Building A
+                </button>
+
+                <button class="building-tab" type="button" data-building="B" onclick="selectBuilding('B')">
+                    Building B
+                </button>
+
+                <button class="building-tab" type="button" data-building="C" onclick="selectBuilding('C')">
+                    Building C
+                </button>
+            </div>
+        </section>
+
+        <!-- ROOMS SECTION -->
+        <section class="rooms-section">
+            <div class="section-header">
+                <div>
+                    <h2 id="buildingTitle">Building A Rooms</h2>
+                    <p>Manage the rooms assigned to this building.</p>
+                </div>
+
+                <label class="search-box" for="roomSearch">
+                    <span aria-hidden="true">⌕</span>
+                    <input type="search" id="roomSearch" placeholder="Search room number" oninput="searchRooms()">
+                </label>
+            </div>
+
+            <div id="adminRoomGrid" class="admin-room-grid">
+                <p>Loading rooms...</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- =========================
+         ADD ROOM MODAL
+    ========================== -->
+    <div id="addRoomModal" class="modal" aria-hidden="true">
+        <div class="modal-content small-modal" role="dialog" aria-modal="true" aria-labelledby="addRoomTitle">
+            <button class="close-btn" type="button" aria-label="Close dialog" onclick="closeModal('addRoomModal')">
+                &times;
+            </button>
+
+            <p class="modal-label">ROOM MANAGEMENT</p>
+            <h2 id="addRoomTitle">Add New Room</h2>
+
+            <form id="addRoomForm">
+                <label for="newRoomNumber">Room Number</label>
+
+                <input type="text" id="newRoomNumber" placeholder="e.g. 107" maxlength="20" required>
+
+                <label for="newRoomBuilding">Building</label>
+
+                <select id="newRoomBuilding" required>
+                    <option value="A">Building A</option>
+                    <option value="B">Building B</option>
+                    <option value="C">Building C</option>
+                </select>
+
+                <button type="submit" class="save-btn">
+                    Add Room
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- =========================
+         EDIT ROOM SCHEDULE MODAL
+    ========================== -->
+    <div id="scheduleModal" class="modal" aria-hidden="true">
+        <div class="modal-content schedule-editor-modal" role="dialog" aria-modal="true"
+            aria-labelledby="scheduleTitle">
+
+            <!-- SCREEN 1: SELECT A DAY -->
+            <section id="scheduleDaysScreen">
+
+                <div class="schedule-modal-header">
+                    <div>
+                        <p class="modal-label">ROOM MANAGEMENT</p>
+
+                        <h2 id="scheduleTitle">Room 100</h2>
+
+                        <p class="schedule-subtitle">
+                            Choose a day to edit its schedule.
+                        </p>
+                    </div>
+
+                    <button type="button" class="close-btn" onclick="closeModal('scheduleModal')"
+                        aria-label="Close schedule">
+                        &times;
+                    </button>
+                </div>
+
+                <div id="scheduleDaysList" class="schedule-days-list">
+                    <!-- JavaScript generates Monday-Saturday here -->
+                </div>
+
+            </section>
+
+            <!-- SCREEN 2: EDIT THE SELECTED DAY -->
+            <section id="scheduleEditScreen" hidden>
+
+                <div class="schedule-modal-header">
+
+                    <div class="schedule-edit-heading">
+
+                        <button type="button" class="schedule-back-btn" onclick="backToScheduleDays()">
+                            &larr; Back
+                        </button>
+
+                        <div>
+                            <p class="modal-label">EDIT ROOM SCHEDULE</p>
+                            <h2 id="scheduleDayTitle">Monday</h2>
+                        </div>
+
+                    </div>
+
+                    <button type="button" class="close-btn" onclick="closeModal('scheduleModal')"
+                        aria-label="Close schedule">
+                        &times;
+                    </button>
+
+                </div>
+
+                <form id="dayScheduleForm">
+
+                    <div id="dayScheduleFields" class="day-schedule-fields">
+                        <!-- JavaScript generates three schedule sections here -->
+                    </div>
+
+                    <p id="scheduleSaveMessage" class="schedule-save-message" role="status" aria-live="polite"></p>
+
+                    <div class="schedule-modal-footer">
+                        <button type="submit" id="saveDayScheduleBtn" class="save-btn">
+                            Save Schedule
+                        </button>
+                    </div>
+
+                </form>
+
+            </section>
+
+        </div>
+    </div>
+
+    <!-- LOAD JAVASCRIPT AFTER ALL HTML ELEMENTS -->
+    <script src="script.js"></script>
+
+</body>
+
+</html>
