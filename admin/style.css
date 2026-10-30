@@ -1,6 +1,6 @@
 /* ==========================================
    WHIM ROOM MANAGEMENT — COMPLETE CSS
-   ========================================== */
+========================================== */
 
 /* THEME */
 :root {
@@ -251,10 +251,7 @@ textarea:focus-visible {
   color: #9ca3af;
 }
 
-/* ==========================================
-   PROFESSIONAL ROOM CARDS
-   ========================================== */
-
+/* ROOM CARDS */
 #adminRoomGrid,
 .admin-room-grid {
   display: grid;
@@ -503,10 +500,7 @@ textarea:focus-visible {
   color: var(--red);
 }
 
-/* ==========================================
-   MODALS
-   ========================================== */
-
+/* MODALS */
 .modal {
   display: none;
   position: fixed;
@@ -631,18 +625,64 @@ textarea:focus-visible {
   transition: background 0.2s;
 }
 
-/* SCHEDULE EDITOR */
+/* ==========================================
+   SCHEDULE EDITOR
+========================================== */
+
+.schedule-editor-modal {
+  width: min(650px, 100%);
+  padding: 30px;
+}
+
+.schedule-modal-header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 25px;
+  padding-right: 35px;
+}
+
+.schedule-modal-header h2 {
+  margin: 0;
+  font-size: 25px;
+}
+
 .schedule-subtitle {
-  margin: -10px 0 20px;
+  margin-top: 7px;
   color: var(--muted);
   font-size: 13px;
 }
 
+.schedule-edit-heading {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.schedule-back-btn {
+  flex-shrink: 0;
+  padding: 9px 13px;
+  color: #3730a3;
+  background: var(--primary-light);
+  border: 1px solid #e0e7ff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schedule-back-btn:hover {
+  color: #fff;
+  background: var(--primary);
+}
+
+/* DAY LIST */
 .schedule-days-list,
 .schedule-slots {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 13px;
 }
 
 .schedule-day-card {
@@ -650,10 +690,18 @@ textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  padding: 15px 17px;
+  padding: 16px 18px;
   background: #fafbff;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 11px;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.schedule-day-card:hover {
+  background: #f5f6ff;
+  border-color: #c7d2fe;
 }
 
 .schedule-day-info {
@@ -686,6 +734,235 @@ textarea:focus-visible {
   background: var(--primary);
 }
 
+/* EDIT DAY FORM */
+#dayScheduleForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.day-schedule-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+  padding-top: 5px;
+}
+
+/* INDIVIDUAL SLOT CARD */
+.schedule-slot-card {
+  position: relative;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e3e6f0;
+  border-radius: 13px;
+  box-shadow: 0 3px 12px rgba(30, 41, 59, 0.045);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.schedule-slot-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 6px 18px rgba(30, 41, 59, 0.07);
+}
+
+.schedule-slot-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 17px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #f0f1f5;
+}
+
+.schedule-slot-heading h4 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.schedule-slot-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* AVAILABLE LABEL */
+.schedule-available-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.schedule-available-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  background: #22c55e;
+  border-radius: 50%;
+}
+
+/* DELETE SLOT BUTTON */
+.delete-slot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 31px;
+  height: 31px;
+  color: #dc2626;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    transform 0.2s;
+}
+
+.delete-slot-btn:hover {
+  color: #fff;
+  background: #dc2626;
+  border-color: #dc2626;
+  transform: scale(1.05);
+}
+
+/* TIME INPUTS */
+.schedule-input-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.schedule-input-grid .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.schedule-input-grid label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schedule-input-grid input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fafbff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 14px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.schedule-input-grid input:focus {
+  background: #fff;
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.09);
+}
+
+/* ADD SLOT BUTTON */
+.add-slot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 20px;
+  padding: 12px 18px;
+  color: var(--primary);
+  background: #f5f6ff;
+  border: 1px dashed #a5b4fc;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 750;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
+}
+
+.add-slot-btn span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  color: #fff;
+  background: var(--primary);
+  border-radius: 7px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.add-slot-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+/* SCHEDULE FOOTER */
+.schedule-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 23px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.schedule-modal-footer .save-btn {
+  width: auto;
+  min-width: 170px;
+  margin: 0;
+}
+
+.schedule-save-message {
+  margin-top: 14px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.schedule-save-message.error {
+  color: var(--red);
+}
+
+.schedule-save-message:empty {
+  display: none;
+}
+
+/* LEGACY SCHEDULE ELEMENTS */
 .schedule-editor-header {
   display: flex;
   align-items: center;
@@ -702,71 +979,6 @@ textarea:focus-visible {
   font-size: 12px;
 }
 
-.schedule-slot-card {
-  padding: 17px;
-  background: #fafbff;
-  border: 1px solid var(--border);
-  border-radius: 11px;
-}
-
-.schedule-slot-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.schedule-slot-heading h4 {
-  font-size: 14px;
-}
-
-.schedule-slot-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-right: 5px;
-  color: var(--primary);
-  background: var(--primary-light);
-  border-radius: 8px;
-  font-size: 12px;
-}
-
-.schedule-input-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 13px;
-}
-
-.schedule-input-grid .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.schedule-input-grid label {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.schedule-input-grid input,
-.schedule-input-grid select {
-  width: 100%;
-  min-width: 0;
-  min-height: 42px;
-  padding: 9px 10px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.schedule-status-label {
-  grid-column: 1 / -1;
-}
-
 .schedule-save-area {
   display: flex;
   align-items: center;
@@ -774,20 +986,6 @@ textarea:focus-visible {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 20px;
-}
-
-.schedule-save-message {
-  color: var(--green);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.schedule-save-message.error {
-  color: var(--red);
-}
-
-.schedule-save-message:empty {
-  display: none;
 }
 
 /* TABLET */
@@ -902,6 +1100,24 @@ textarea:focus-visible {
     font-size: 22px;
   }
 
+  .schedule-editor-modal {
+    padding: 22px 16px;
+  }
+
+  .schedule-modal-header {
+    padding-right: 30px;
+  }
+
+  .schedule-modal-header h2 {
+    font-size: 21px;
+  }
+
+  .schedule-edit-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
   .schedule-day-card {
     padding: 12px;
   }
@@ -910,12 +1126,22 @@ textarea:focus-visible {
     padding: 8px 10px;
   }
 
-  .schedule-input-grid {
-    grid-template-columns: 1fr;
+  .schedule-slot-card {
+    padding: 15px;
   }
 
-  .schedule-status-label {
-    grid-column: auto;
+  .schedule-input-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .schedule-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .schedule-modal-footer .save-btn {
+    width: 100%;
   }
 
   .schedule-save-area {
@@ -938,123 +1164,105 @@ textarea:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
-/* Back button inside Edit Time in Days */
-.edit-time-days .back-btn,
-.edit-time-days .back-button,
-.edit-time-days button.back-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: #ffffff;
-  color: #344054;
-  border: 1px solid #d0d5dd;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+/* ==========================================
+   SCHEDULE EDITOR — UX IMPROVEMENTS
+========================================== */
+
+/* More space between slots */
+.day-schedule-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0;
 }
 
-.edit-time-days .back-btn:hover,
-.edit-time-days .back-button:hover,
-.edit-time-days button.back-btn:hover {
-  background: #f2f4f7;
-  border-color: #98a2b3;
-  color: #101828;
+.schedule-slot-card {
+  padding: 22px;
+  margin: 0;
+  border-radius: 14px;
 }
 
-/* Back button inside Edit Time */
-.schedule-back-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 9px 15px;
-  margin-bottom: 12px;
-
-  background: #ffffff;
-  color: #4f46e5;
-  border: 1px solid #e0e7ff;
-  border-radius: 9px;
-
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.4;
-
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+/* Slot heading: title and badge on the left, X on the far right */
+.schedule-slot-heading {
+  justify-content: flex-start;
+  gap: 12px;
 }
 
-.schedule-back-btn:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.08);
-  transform: translateX(-2px);
+.schedule-slot-heading .delete-slot-btn {
+  margin-left: auto;
 }
 
-.schedule-back-btn:active {
-  transform: translateX(0);
+/* Animation when a new slot appears */
+.schedule-slot-card.is-new {
+  animation: slotAppear 0.35s ease-out;
+  border-color: var(--primary);
 }
 
-.schedule-back-btn:focus-visible {
-  outline: 3px solid rgba(79, 70, 229, 0.2);
-  outline-offset: 2px;
+@keyframes slotAppear {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* =========================
-   PROFESSIONAL NOTIFICATIONS
-========================= */
+/* Add Slot button sits right under the last slot */
+.add-slot-btn {
+  margin-top: 24px;
+}
 
-.admin-toast {
+/* Footer stays visible while you scroll the slots */
+.schedule-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin: 24px -30px -30px;
+  padding: 16px 30px 22px;
+  background: #fff;
+  border-top: 1px solid var(--border);
+}
+
+.schedule-modal-footer .save-btn {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+}
+
+.schedule-save-message {
+  margin: 0;
+  text-align: center;
+}
+
+/* Popup message after saving */
+.toast {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 9999;
-
-  max-width: min(380px, calc(100vw - 32px));
-  padding: 14px 20px;
-
-  color: #ffffff;
-  background: #20242c;
+  bottom: 28px;
+  left: 50%;
+  z-index: 2000;
+  padding: 13px 22px;
+  color: #fff;
+  background: #16a34a;
   border-radius: 10px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   font-size: 14px;
-  font-weight: 600;
-
-  opacity: 0;
-  transform: translateY(12px);
-  pointer-events: none;
-
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  font-weight: 700;
+  transform: translateX(-50%);
+  animation: slotAppear 0.25s ease-out;
 }
 
-.admin-toast.visible {
-  opacity: 1;
-  transform: translateY(0);
+.toast.error {
+  background: #dc2626;
 }
 
-.admin-toast.success {
-  background: #15803d;
-}
-
-.admin-toast.error {
-  background: #b91c1c;
-}
-
-@media (max-width: 600px) {
-  .admin-toast {
-    right: 16px;
-    bottom: 16px;
-    left: 16px;
-    max-width: none;
+@media (max-width: 650px) {
+  .schedule-modal-footer {
+    margin: 20px -16px -22px;
+    padding: 14px 16px 18px;
   }
 }

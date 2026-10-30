@@ -14,53 +14,79 @@ function respond($success, $message, $statusCode = 200) {
     exit;
 }
 
+// Only allow POST requests.
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     respond(false, "Invalid request method.", 405);
 }
 
+// Get submitted values.
 $roomId = filter_input(INPUT_POST, "room_id", FILTER_VALIDATE_INT);
-$day = $_POST["day"] ?? "";
+$day = trim($_POST["day"] ?? "");
 $schedulesJson = $_POST["schedules"] ?? "";
 
+// Allowed days.
 $allowedDays = [
-    "Monday", "Tuesday", "Wednesday",
-    "Thursday", "Friday", "Saturday"
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
 ];
 
+// Validate room ID.
 if (!$roomId || $roomId < 1) {
     respond(false, "Invalid room ID.", 400);
 }
 
+// Validate selected day.
 if (!in_array($day, $allowedDays, true)) {
     respond(false, "Invalid day selected.", 400);
 }
 
+// Decode schedules JSON.
 $schedules = json_decode($schedulesJson, true);
 
-if (!is_array($schedules) || count($schedules) !== 3) {
-    respond(false, "Exactly three schedule sections are required.", 400);
+// Allow between 1 and 255 slots.
+if (
+    !is_array($schedules) ||
+    count($schedules) < 1 ||
+    count($schedules) > 255
+) {
+    respond(
+        false,
+        "You must have between 1 and 255 schedule slots.",
+        400
+    );
 }
 
 $cleanSchedules = [];
 
+// Validate every submitted slot.
 foreach ($schedules as $schedule) {
+
+    if (!is_array($schedule)) {
+        respond(false, "Invalid schedule data.", 400);
+    }
+
     $start = $schedule["start_time"] ?? "";
     $end = $schedule["end_time"] ?? "";
-    $status = $schedule["status"] ?? "";
 
+    // Validate time format.
     if (
         !is_string($start) ||
         !is_string($end) ||
         !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $start) ||
         !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $end)
     ) {
-        respond(false, "Please enter valid start and end times.", 400);
+        respond(
+            false,
+            "Please enter valid start and end times.",
+            400
+        );
     }
 
-    if (!in_array($status, ["occupied", "available"], true)) {
-        respond(false, "Invalid schedule status.", 400);
-    }
-
+    // Only allow schedules between 7:00 AM and 8:00 PM.
     if (
         $start < "07:00" ||
         $end > "20:00" ||
@@ -73,38 +99,37 @@ foreach ($schedules as $schedule) {
         );
     }
 
+    // Always force the status to available.
     $cleanSchedules[] = [
         "start_time" => $start . ":00",
         "end_time" => $end . ":00",
-        "status" => $status
+        "status" => "available"
     ];
 }
 
-// Sort schedules by start time.
+// Sort schedules by starting time.
 usort($cleanSchedules, function ($a, $b) {
     return strcmp($a["start_time"], $b["start_time"]);
 });
 
-// Check overlapping times.
+// Check for overlapping schedules.
 for ($i = 1; $i < count($cleanSchedules); $i++) {
+
     if (
         $cleanSchedules[$i]["start_time"] <
         $cleanSchedules[$i - 1]["end_time"]
     ) {
-        respond(false, "Schedule sections must not overlap.", 400);
+        respond(
+            false,
+            "Schedule slots must not overlap.",
+            400
+        );
     }
 }
 
-// Assign slot numbers after sorting.
-foreach ($cleanSchedules as $index => &$schedule) {
-    $schedule["slot_number"] = $index + 1;
-}
-unset($schedule);
-
 try {
-    $pdo->beginTransaction();
 
-    // Make sure the room still exists.
+    // Check whether the room exists.
     $checkRoom = $pdo->prepare(
         "SELECT id FROM rooms WHERE id = ?"
     );
@@ -112,41 +137,61 @@ try {
     $checkRoom->execute([$roomId]);
 
     if (!$checkRoom->fetch()) {
-        $pdo->rollBack();
-        respond(false, "Room not found. Please refresh the room list.", 404);
+        respond(false, "Room not found.", 404);
     }
 
-    // Replace this day's three schedule records.
+    // Start database transaction.
+    $pdo->beginTransaction();
+
+    // Remove the old schedules for this room and day.
     $delete = $pdo->prepare("
         DELETE FROM room_schedules
-        WHERE room_id = ? AND day_of_week = ?
+        WHERE room_id = ?
+        AND day_of_week = ?
     ");
 
-    $delete->execute([$roomId, $day]);
+    $delete->execute([
+        $roomId,
+        $day
+    ]);
 
+    // Prepare the new schedule insertion.
     $insert = $pdo->prepare("
         INSERT INTO room_schedules
-            (room_id, day_of_week, slot_number,
-             start_time, end_time, status)
-        VALUES (?, ?, ?, ?, ?, ?)
+            (
+                room_id,
+                day_of_week,
+                slot_number,
+                start_time,
+                end_time,
+                status
+            )
+        VALUES (?, ?, ?, ?, ?, 'available')
     ");
 
-    foreach ($cleanSchedules as $schedule) {
+    // Insert all schedules with sequential slot numbers.
+    foreach ($cleanSchedules as $index => $schedule) {
+
         $insert->execute([
             $roomId,
             $day,
-            $schedule["slot_number"],
+            $index + 1,
             $schedule["start_time"],
-            $schedule["end_time"],
-            $schedule["status"]
+            $schedule["end_time"]
         ]);
     }
 
+    // Save database changes.
     $pdo->commit();
 
-    respond(true, $day . "'s schedule was saved successfully.");
+    respond(
+        true,
+        $day . "'s schedule was saved successfully."
+    );
 
 } catch (Throwable $e) {
+
+    // Undo changes if something goes wrong.
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }

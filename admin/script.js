@@ -1,17 +1,19 @@
-/* =====================================================
+/* =========================
    WHIM ROOM MANAGEMENT
-   Complete Admin JavaScript
-===================================================== */
+   script.js
+========================= */
+
+"use strict";
 
 /* =========================
    GLOBAL VARIABLES
 ========================= */
 
+let rooms = [];
 let currentBuilding = "A";
 let currentRoomId = null;
-let currentRoomNumber = null;
-let currentScheduleDay = null;
-let rooms = [];
+let currentRoomNumber = "";
+let currentScheduleDay = "";
 
 const DAYS = [
   "Monday",
@@ -44,7 +46,7 @@ const DEFAULT_SCHEDULES = [
 ];
 
 /* =========================
-   HELPER FUNCTIONS
+   DOM HELPERS
 ========================= */
 
 function getElement(id) {
@@ -65,6 +67,23 @@ function escapeHTML(value) {
   });
 }
 
+function normalizeTime(time) {
+  if (!time) return "";
+  return String(time).slice(0, 5);
+}
+
+function normalizeRoom(room) {
+  return {
+    ...room,
+    id: room.id ?? room.room_id,
+    room_number: room.room_number ?? room.room_name ?? "",
+    building_code: String(
+      room.building_code ?? room.building ?? "",
+    ).toUpperCase(),
+    status: String(room.status ?? "available").toLowerCase(),
+  };
+}
+
 async function readJSON(response) {
   const text = await response.text();
 
@@ -72,77 +91,23 @@ async function readJSON(response) {
 
   try {
     data = JSON.parse(text);
-  } catch (error) {
-    console.error("Invalid JSON response:", text);
-
+  } catch {
     throw new Error(
-      "The server returned an invalid response. Check your PHP endpoint.",
+      "The server did not return valid JSON. Check your PHP endpoint for errors.",
     );
   }
 
-  if (!response.ok || data.success === false) {
-    throw new Error(data.message || `Request failed (${response.status}).`);
+  if (!response.ok) {
+    throw new Error(
+      data.message || data.error || `Request failed (${response.status}).`,
+    );
+  }
+
+  if (data.success === false) {
+    throw new Error(data.message || data.error || "The request failed.");
   }
 
   return data;
-}
-
-function normalizeTime(time) {
-  if (!time) return "";
-
-  return String(time).substring(0, 5);
-}
-
-/* =========================
-   TOAST NOTIFICATIONS
-========================= */
-
-function showToast(message, type = "success") {
-  let toast = getElement("adminToast");
-
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "adminToast";
-    toast.className = "admin-toast";
-
-    toast.setAttribute("role", "status");
-    toast.setAttribute("aria-live", "polite");
-
-    document.body.appendChild(toast);
-  }
-
-  toast.textContent = message;
-  toast.className = `admin-toast ${type} visible`;
-
-  clearTimeout(window.adminToastTimer);
-
-  window.adminToastTimer = setTimeout(function () {
-    toast.classList.remove("visible");
-  }, 3000);
-}
-
-/* =========================
-   MODAL FUNCTIONS
-========================= */
-
-function openAddRoomModal() {
-  openModal("addRoomModal");
-
-  const roomNumberInput = getElement("newRoomNumber");
-
-  if (roomNumberInput) {
-    roomNumberInput.focus();
-  }
-}
-
-function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-
-  if (modal) {
-    modal.classList.remove("active");
-    modal.style.display = "none";
-    modal.setAttribute("aria-hidden", "true");
-  }
 }
 
 /* =========================
@@ -154,14 +119,44 @@ function showTodayDate() {
 
   if (!dateElement) return;
 
-  const today = new Date();
-
-  dateElement.textContent = today.toLocaleDateString("en-US", {
+  dateElement.textContent = new Date().toLocaleDateString("en-PH", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+}
+
+/* =========================
+   MODALS
+========================= */
+
+function openAddRoomModal() {
+  const modal = getElement("addRoomModal");
+
+  if (modal) {
+    modal.style.display = "flex";
+
+    const roomNumberInput = getElement("newRoomNumber");
+
+    if (roomNumberInput) {
+      roomNumberInput.focus();
+    }
+  }
+}
+
+function closeModal(modalId) {
+  const modal = getElement(modalId);
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+function closeModalWhenBackdropClicked(event, modalId) {
+  if (event.target.id === modalId) {
+    closeModal(modalId);
+  }
 }
 
 /* =========================
@@ -186,15 +181,19 @@ async function loadRooms() {
 
     const data = await readJSON(response);
 
+    let roomList;
+
     if (Array.isArray(data)) {
-      rooms = data;
+      roomList = data;
     } else if (Array.isArray(data.rooms)) {
-      rooms = data.rooms;
+      roomList = data.rooms;
     } else if (Array.isArray(data.data)) {
-      rooms = data.data;
+      roomList = data.data;
     } else {
-      rooms = [];
+      roomList = [];
     }
+
+    rooms = roomList.map(normalizeRoom);
 
     showRooms();
     updateRoomStats();
@@ -204,9 +203,10 @@ async function loadRooms() {
     if (roomGrid) {
       roomGrid.innerHTML = `
         <div class="error-state">
-          <h3>Unable to load rooms</h3>
+          <strong>Unable to load rooms.</strong>
           <p>${escapeHTML(error.message)}</p>
-          <button class="secondary-btn" onclick="loadRooms()">
+          <button class="secondary-btn" type="button"
+            onclick="loadRooms()">
             Try Again
           </button>
         </div>
@@ -246,15 +246,16 @@ function selectBuilding(building) {
 function showRooms() {
   const roomGrid = getElement("adminRoomGrid");
 
-  if (!roomGrid) return;
+  if (!roomGrid) {
+    console.error('Missing HTML element: id="adminRoomGrid"');
+    return;
+  }
 
   const searchInput = getElement("roomSearch");
-
   const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : "";
 
   const filteredRooms = rooms.filter(function (room) {
-    const sameBuilding =
-      String(room.building_code).toUpperCase() === currentBuilding;
+    const sameBuilding = room.building_code === currentBuilding;
 
     const matchesSearch = String(room.room_number)
       .toLowerCase()
@@ -290,52 +291,44 @@ function showRooms() {
       const statusText = status === "occupied" ? "Unavailable" : "Available";
 
       return `
-      <article class="room-card">
+        <article class="room-card">
+          <div class="room-card-header">
+            <h3>Room ${escapeHTML(room.room_number)}</h3>
 
-        <div class="room-card-header">
-          <h3>Room ${escapeHTML(room.room_number)}</h3>
+            <span class="room-status ${status}">
+              ${statusText}
+            </span>
+          </div>
 
-          <span class="room-status ${status}">
-            ${statusText}
-          </span>
-        </div>
+          <p class="room-building">
+            Building ${escapeHTML(room.building_code)}
+          </p>
 
-        <p class="room-building">
-          Building ${escapeHTML(room.building_code)}
-        </p>
+          <div class="room-card-actions">
+            <button
+              class="secondary-btn"
+              type="button"
+              data-action="edit-schedule"
+              data-room-id="${escapeHTML(room.id)}"
+              data-room-number="${escapeHTML(room.room_number)}"
+              data-building="${escapeHTML(room.building_code)}">
+              Edit Schedule
+            </button>
 
-        <div class="room-card-actions">
-
-          <button
-            class="secondary-btn"
-            type="button"
-            data-action="edit-schedule"
-            data-room-id="${escapeHTML(room.id)}"
-            data-room-number="${escapeHTML(room.room_number)}"
-            data-building="${escapeHTML(room.building_code)}">
-            Edit Schedule
-          </button>
-
-          <button
-            class="danger-btn"
-            type="button"
-            data-action="delete-room"
-            data-room-id="${escapeHTML(room.id)}"
-            data-room-number="${escapeHTML(room.room_number)}">
-            Delete
-          </button>
-
-        </div>
-
-      </article>
-    `;
+            <button
+              class="danger-btn"
+              type="button"
+              data-action="delete-room"
+              data-room-id="${escapeHTML(room.id)}"
+              data-room-number="${escapeHTML(room.room_number)}">
+              Delete
+            </button>
+          </div>
+        </article>
+      `;
     })
     .join("");
 }
-
-/* =========================
-   SEARCH ROOMS
-========================= */
 
 function searchRooms() {
   showRooms();
@@ -351,7 +344,7 @@ function updateRoomStats() {
   const unavailableElement = getElement("unavailableRooms");
 
   const buildingRooms = rooms.filter(function (room) {
-    return String(room.building_code).toUpperCase() === currentBuilding;
+    return room.building_code === currentBuilding;
   });
 
   const availableCount = buildingRooms.filter(function (room) {
@@ -373,9 +366,9 @@ function updateRoomStats() {
   }
 }
 
-/* =====================================================
+/* =========================
    ADD ROOM
-===================================================== */
+========================= */
 
 const addRoomForm = getElement("addRoomForm");
 
@@ -390,62 +383,39 @@ if (addRoomForm) {
 
     const roomNumber = roomNumberInput ? roomNumberInput.value.trim() : "";
 
-    const buildingCode = buildingInput ? buildingInput.value.toUpperCase() : "";
+    const buildingCode = buildingInput ? buildingInput.value : "";
 
     if (!roomNumber || !buildingCode) {
-      showToast("Please complete all room details.", "error");
+      alert("Please enter the room number and select a building.");
       return;
     }
 
-    if (submitButton && submitButton.disabled) return;
-
     const formData = new FormData();
-
     formData.append("room_number", roomNumber);
     formData.append("building_code", buildingCode);
 
     try {
       if (submitButton) {
         submitButton.disabled = true;
-        submitButton.textContent = "Adding room...";
+        submitButton.textContent = "Adding...";
       }
 
       const response = await fetch("add_room.php", {
         method: "POST",
         body: formData,
-        headers: {
-          Accept: "application/json",
-        },
       });
 
       const data = await readJSON(response);
 
-      // Change to the building where the room was added.
-      currentBuilding = buildingCode;
-
-      document.querySelectorAll(".building-tab").forEach(function (tab) {
-        const active = tab.dataset.building === currentBuilding;
-
-        tab.classList.toggle("active", active);
-        tab.setAttribute("aria-pressed", String(active));
-      });
-
-      const title = getElement("buildingTitle");
-
-      if (title) {
-        title.textContent = `Building ${currentBuilding} Rooms`;
-      }
+      alert(data.message || "Room added successfully.");
 
       addRoomForm.reset();
       closeModal("addRoomModal");
 
       await loadRooms();
-
-      showToast(data.message || "Room added successfully.");
     } catch (error) {
-      console.error("Add room error:", error);
-
-      showToast(error.message || "Unable to add room.", "error");
+      console.error("Could not add room:", error);
+      alert(error.message || "Unable to add room.");
     } finally {
       if (submitButton) {
         submitButton.disabled = false;
@@ -455,49 +425,34 @@ if (addRoomForm) {
   });
 }
 
-/* =====================================================
+/* =========================
    DELETE ROOM
-===================================================== */
+========================= */
 
-async function deleteRoom(roomId, roomNumber, button = null) {
+async function deleteRoom(roomId, roomNumber) {
   const confirmed = confirm(
-    `Are you sure you want to delete Room ${roomNumber} and all its schedules?`,
+    `Are you sure you want to delete Room ${roomNumber}?`,
   );
 
   if (!confirmed) return;
 
   const formData = new FormData();
-
   formData.append("id", roomId);
 
   try {
-    if (button) {
-      button.disabled = true;
-      button.textContent = "Deleting...";
-    }
-
     const response = await fetch("delete_room.php", {
       method: "POST",
       body: formData,
-      headers: {
-        Accept: "application/json",
-      },
     });
 
     const data = await readJSON(response);
 
+    alert(data.message || "Room deleted successfully.");
+
     await loadRooms();
-
-    showToast(data.message || "Room deleted successfully.");
   } catch (error) {
-    console.error("Delete room error:", error);
-
-    showToast(error.message || "Unable to delete room.", "error");
-
-    if (button) {
-      button.disabled = false;
-      button.textContent = "Delete";
-    }
+    console.error("Could not delete room:", error);
+    alert(error.message || "Unable to delete room.");
   }
 }
 
@@ -524,25 +479,25 @@ if (roomGrid) {
     }
 
     if (action === "delete-room") {
-      deleteRoom(button.dataset.roomId, button.dataset.roomNumber, button);
+      deleteRoom(button.dataset.roomId, button.dataset.roomNumber);
     }
   });
 }
 
-/* =====================================================
+/* =========================
    SCHEDULE MODAL
-===================================================== */
+========================= */
 
 function setScheduleScreen(screen) {
   const daysScreen = getElement("scheduleDaysScreen");
   const editScreen = getElement("scheduleEditScreen");
 
   if (daysScreen) {
-    daysScreen.style.display = screen === "days" ? "block" : "none";
+    daysScreen.hidden = screen !== "days";
   }
 
   if (editScreen) {
-    editScreen.style.display = screen === "edit" ? "block" : "none";
+    editScreen.hidden = screen !== "edit";
   }
 }
 
@@ -553,6 +508,32 @@ function showScheduleMessage(message, isError = false) {
 
   messageElement.textContent = message;
   messageElement.classList.toggle("error", isError);
+}
+
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(totalMinutes) {
+  const hours = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const minutes = String(totalMinutes % 60).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function showToast(message, isError = false) {
+  const oldToast = document.querySelector(".toast");
+  if (oldToast) oldToast.remove();
+
+  const toast = document.createElement("div");
+  toast.className = isError ? "toast error" : "toast";
+  toast.textContent = message;
+  toast.setAttribute("role", "status");
+
+  document.body.appendChild(toast);
+  setTimeout(function () {
+    toast.remove();
+  }, 3000);
 }
 
 async function editRoomSchedule(building, roomId, roomNumber) {
@@ -614,26 +595,31 @@ async function fetchDaySchedule(day) {
     );
   });
 
-  return DEFAULT_SCHEDULES.map(function (defaultSlot) {
-    const savedSlot = scheduleList.find(function (item) {
-      return Number(item.slot_number) === Number(defaultSlot.slot_number);
+  // Sort saved slots by their slot number.
+  scheduleList.sort(function (a, b) {
+    return Number(a.slot_number) - Number(b.slot_number);
+  });
+
+  // Use default slots only when no saved slots exist.
+  if (scheduleList.length === 0) {
+    return DEFAULT_SCHEDULES.map(function (slot) {
+      return { ...slot };
     });
+  }
 
-    if (!savedSlot) {
-      return { ...defaultSlot };
-    }
-
+  // Keep every saved slot, not just the first three.
+  return scheduleList.map(function (slot, index) {
     return {
-      slot_number: Number(savedSlot.slot_number),
-      start_time: normalizeTime(savedSlot.start_time) || defaultSlot.start_time,
-      end_time: normalizeTime(savedSlot.end_time) || defaultSlot.end_time,
-      status: String(savedSlot.status || defaultSlot.status).toLowerCase(),
+      slot_number: index + 1,
+      start_time: normalizeTime(slot.start_time),
+      end_time: normalizeTime(slot.end_time),
+      status: "available",
     };
   });
 }
 
 /* =========================
-   SHOW SCHEDULE DAYS
+   SHOW DAYS
 ========================= */
 
 async function renderScheduleDays() {
@@ -646,59 +632,59 @@ async function renderScheduleDays() {
   try {
     const dayResults = await Promise.all(
       DAYS.map(async function (day) {
-        return {
-          day,
-          slots: await fetchDaySchedule(day),
-        };
+        try {
+          return {
+            day,
+            slots: await fetchDaySchedule(day),
+          };
+        } catch (error) {
+          console.warn(`Could not load ${day} schedule:`, error);
+
+          return {
+            day,
+            slots: DEFAULT_SCHEDULES.map((slot) => ({ ...slot })),
+          };
+        }
       }),
     );
 
     list.innerHTML = dayResults
       .map(function (item) {
-        const occupied = item.slots.filter(function (slot) {
-          return slot.status === "occupied";
-        }).length;
+        const slotCount = item.slots.length;
 
         const statusText =
-          occupied > 0
-            ? `${occupied} occupied slot${occupied > 1 ? "s" : ""}`
-            : "No occupied slots";
+          slotCount === 1
+            ? "1 available time slot"
+            : `${slotCount} available time slots`;
 
         return `
-        <div class="schedule-day-card">
+          <div class="schedule-day-card">
+            <div class="schedule-day-info">
+              <h3>${escapeHTML(item.day)}</h3>
+              <p>${escapeHTML(statusText)}</p>
+            </div>
 
-          <div class="schedule-day-info">
-            <h3>${escapeHTML(item.day)}</h3>
-            <p>${escapeHTML(statusText)}</p>
+            <button
+              class="schedule-edit-btn"
+              type="button"
+              data-action="edit-day"
+              data-day="${escapeHTML(item.day)}">
+              Edit Time
+            </button>
           </div>
-
-          <button
-            class="schedule-edit-btn"
-            type="button"
-            data-action="edit-day"
-            data-day="${escapeHTML(item.day)}">
-            Edit Time
-          </button>
-
-        </div>
-      `;
+        `;
       })
       .join("");
   } catch (error) {
-    console.error("Could not load schedules:", error);
+    console.error("Could not load schedule days:", error);
 
     list.innerHTML = `
       <div class="error-state">
-        Unable to load the schedule.
-        <p>${escapeHTML(error.message)}</p>
+        Unable to load the schedule. Please try again.
       </div>
     `;
   }
 }
-
-/* =========================
-   SCHEDULE DAY BUTTONS
-========================= */
 
 const scheduleDaysList = getElement("scheduleDaysList");
 
@@ -712,9 +698,120 @@ if (scheduleDaysList) {
   });
 }
 
-/* =====================================================
+/* =========================
+   CREATE SLOT HTML
+========================= */
+
+function createScheduleSlotHTML(slot, index) {
+  const number = index + 1;
+
+  return `
+    <section class="schedule-slot-card">
+
+      <div class="schedule-slot-heading">
+        <h4>
+          <span class="schedule-slot-number">${number}</span>
+          Time Slot ${number}
+        </h4>
+
+        <span class="schedule-available-badge">Available</span>
+
+        <button
+          class="delete-slot-btn"
+          type="button"
+          data-action="delete-slot"
+          aria-label="Delete time slot ${number}"
+          title="Delete this slot">
+          &times;
+        </button>
+      </div>
+
+      <div class="schedule-input-grid">
+        <div class="form-group">
+          <label for="slot${number}Start">Start Time</label>
+          <input
+            id="slot${number}Start"
+            name="start_time_${number}"
+            type="time"
+            value="${escapeHTML(slot.start_time)}"
+            required>
+        </div>
+
+        <div class="form-group">
+          <label for="slot${number}End">End Time</label>
+          <input
+            id="slot${number}End"
+            name="end_time_${number}"
+            type="time"
+            value="${escapeHTML(slot.end_time)}"
+            required>
+        </div>
+      </div>
+
+    </section>
+  `;
+}
+
+/* =========================
+   RENDER SCHEDULE SLOTS
+========================= */
+
+function renderScheduleSlots(slots) {
+  const fields = getElement("dayScheduleFields");
+
+  if (!fields) return;
+
+  fields.innerHTML = slots
+    .map(function (slot, index) {
+      return createScheduleSlotHTML(slot, index);
+    })
+    .join("");
+}
+
+/* =========================
+   RENUMBER SCHEDULE SLOTS
+========================= */
+
+function renumberScheduleSlots() {
+  const fields = getElement("dayScheduleFields");
+  if (!fields) return;
+
+  fields
+    .querySelectorAll(".schedule-slot-card")
+    .forEach(function (card, index) {
+      const number = index + 1;
+
+      const heading = card.querySelector(".schedule-slot-heading h4");
+      if (heading) {
+        heading.innerHTML = `
+        <span class="schedule-slot-number">${number}</span>
+        Time Slot ${number}
+      `;
+      }
+
+      const inputs = card.querySelectorAll('input[type="time"]');
+      const labels = card.querySelectorAll(".form-group label");
+      const parts = ["Start", "End"];
+      const names = ["start_time", "end_time"];
+
+      inputs.forEach(function (input, i) {
+        input.id = `slot${number}${parts[i]}`;
+        input.name = `${names[i]}_${number}`;
+
+        if (labels[i]) {
+          labels[i].htmlFor = input.id;
+        }
+      });
+
+      const deleteButton = card.querySelector(".delete-slot-btn");
+      if (deleteButton) {
+        deleteButton.setAttribute("aria-label", `Delete time slot ${number}`);
+      }
+    });
+}
+/* =========================
    EDIT ONE DAY
-===================================================== */
+========================= */
 
 async function openDaySchedule(day) {
   currentScheduleDay = day;
@@ -736,80 +833,7 @@ async function openDaySchedule(day) {
   try {
     const slots = await fetchDaySchedule(day);
 
-    if (!fields) return;
-
-    fields.innerHTML = slots
-      .map(function (slot, index) {
-        const number = index + 1;
-
-        return `
-        <section class="schedule-slot-card">
-
-          <div class="schedule-slot-heading">
-            <h4>
-              <span class="schedule-slot-number">
-                ${number}
-              </span>
-              Time Slot ${number}
-            </h4>
-          </div>
-
-          <div class="schedule-input-grid">
-
-            <div class="form-group">
-              <label for="slot${number}Start">
-                Start Time
-              </label>
-
-              <input
-                id="slot${number}Start"
-                name="start_time_${number}"
-                type="time"
-                value="${escapeHTML(slot.start_time)}"
-                required>
-            </div>
-
-            <div class="form-group">
-              <label for="slot${number}End">
-                End Time
-              </label>
-
-              <input
-                id="slot${number}End"
-                name="end_time_${number}"
-                type="time"
-                value="${escapeHTML(slot.end_time)}"
-                required>
-            </div>
-
-            <div class="form-group schedule-status-label">
-              <label for="slot${number}Status">
-                Status
-              </label>
-
-              <select
-                id="slot${number}Status"
-                name="status_${number}"
-                required>
-
-                <option value="available"
-                  ${slot.status === "available" ? "selected" : ""}>
-                  Available
-                </option>
-
-                <option value="occupied"
-                  ${slot.status === "occupied" ? "selected" : ""}>
-                  Occupied
-                </option>
-
-              </select>
-            </div>
-
-          </div>
-        </section>
-      `;
-      })
-      .join("");
+    renderScheduleSlots(slots);
   } catch (error) {
     console.error("Could not load day schedule:", error);
 
@@ -817,26 +841,121 @@ async function openDaySchedule(day) {
       fields.innerHTML = `
         <div class="error-state">
           Could not load the saved schedule.
+
           <p>${escapeHTML(error.message)}</p>
 
-          <button
-            class="secondary-btn"
-            type="button"
-            id="retryScheduleBtn">
+          <button class="secondary-btn" type="button"
+            onclick="openDaySchedule('${escapeHTML(day)}')">
             Try Again
           </button>
         </div>
       `;
-
-      getElement("retryScheduleBtn").addEventListener("click", function () {
-        openDaySchedule(day);
-      });
     }
   }
 }
 
 /* =========================
-   BACK TO SCHEDULE DAYS
+   ADD SLOT BUTTON
+========================= */
+
+const addScheduleSlotBtn = getElement("addScheduleSlotBtn");
+
+if (addScheduleSlotBtn) {
+  addScheduleSlotBtn.addEventListener("click", function () {
+    const fields = getElement("dayScheduleFields");
+    if (!fields) return;
+
+    let cards = fields.querySelectorAll(".schedule-slot-card");
+
+    // If a loading or error message is showing, clear it first.
+    if (cards.length === 0) {
+      fields.innerHTML = "";
+    }
+
+    if (cards.length >= 255) {
+      showScheduleMessage("You cannot add more than 255 time slots.", true);
+      return;
+    }
+
+    // Find the latest end time of all current slots.
+    const DAY_START = 7 * 60; // 7:00 AM
+    const DAY_END = 20 * 60; // 8:00 PM
+    let latestEnd = DAY_START;
+
+    cards.forEach(function (card) {
+      const endInput = card.querySelectorAll('input[type="time"]')[1];
+
+      if (endInput && endInput.value) {
+        latestEnd = Math.max(latestEnd, timeToMinutes(endInput.value));
+      }
+    });
+
+    if (latestEnd >= DAY_END) {
+      showScheduleMessage(
+        "No time left. The last slot already ends at 8:00 PM.",
+        true,
+      );
+      return;
+    }
+
+    // The new slot starts where the last one ends and lasts 1 hour.
+    const newSlot = {
+      start_time: minutesToTime(latestEnd),
+      end_time: minutesToTime(Math.min(latestEnd + 60, DAY_END)),
+      status: "available",
+    };
+
+    fields.insertAdjacentHTML(
+      "beforeend",
+      createScheduleSlotHTML(newSlot, cards.length),
+    );
+
+    renumberScheduleSlots();
+    showScheduleMessage("");
+
+    const newCard = fields.lastElementChild;
+    newCard.classList.add("is-new");
+    newCard.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    const firstInput = newCard.querySelector('input[type="time"]');
+    if (firstInput) firstInput.focus({ preventScroll: true });
+  });
+}
+
+/* =========================
+   DELETE SLOT BUTTON
+========================= */
+
+const dayScheduleFields = getElement("dayScheduleFields");
+
+if (dayScheduleFields) {
+  dayScheduleFields.addEventListener("click", function (event) {
+    const deleteButton = event.target.closest(
+      'button[data-action="delete-slot"]',
+    );
+
+    if (!deleteButton) return;
+
+    const fields = getElement("dayScheduleFields");
+    const cards = fields.querySelectorAll(".schedule-slot-card");
+
+    if (cards.length <= 1) {
+      showScheduleMessage("At least one time slot is required.", true);
+      return;
+    }
+
+    const card = deleteButton.closest(".schedule-slot-card");
+
+    if (card) {
+      card.remove();
+      renumberScheduleSlots();
+      showScheduleMessage("");
+    }
+  });
+}
+
+/* =========================
+   BACK TO DAYS
 ========================= */
 
 function backToScheduleDays() {
@@ -845,9 +964,9 @@ function backToScheduleDays() {
   renderScheduleDays();
 }
 
-/* =====================================================
+/* =========================
    SAVE SCHEDULE
-===================================================== */
+========================= */
 
 const dayScheduleForm = getElement("dayScheduleForm");
 
@@ -861,32 +980,34 @@ if (dayScheduleForm) {
     }
 
     const saveButton = getElement("saveDayScheduleBtn");
+    const fields = getElement("dayScheduleFields");
 
-    if (saveButton && saveButton.disabled) return;
+    if (!fields) {
+      showScheduleMessage("Schedule fields are missing.", true);
+      return;
+    }
+
+    const cards = fields.querySelectorAll(".schedule-slot-card");
+
+    if (cards.length === 0) {
+      showScheduleMessage("Please add at least one time slot.", true);
+      return;
+    }
 
     const schedules = [];
 
-    for (let slotNumber = 1; slotNumber <= 3; slotNumber++) {
-      const startInput = getElement(`slot${slotNumber}Start`);
-      const endInput = getElement(`slot${slotNumber}End`);
-      const statusInput = getElement(`slot${slotNumber}Status`);
+    for (let index = 0; index < cards.length; index++) {
+      const card = cards[index];
+      const slotNumber = index + 1;
 
-      if (!startInput || !endInput || !statusInput) {
-        showScheduleMessage("One or more schedule fields are missing.", true);
-        return;
-      }
+      const inputs = card.querySelectorAll('input[type="time"]');
 
-      const startTime = startInput.value;
-      const endTime = endInput.value;
+      const startTime = inputs[0] ? inputs[0].value : "";
+      const endTime = inputs[1] ? inputs[1].value : "";
 
       if (!startTime || !endTime) {
-        showScheduleMessage("Please enter all start and end times.", true);
-        return;
-      }
-
-      if (startTime < "07:00" || endTime > "20:00") {
         showScheduleMessage(
-          "Schedules must be between 7:00 AM and 8:00 PM.",
+          `Please enter both times for Slot ${slotNumber}.`,
           true,
         );
         return;
@@ -900,8 +1021,11 @@ if (dayScheduleForm) {
         return;
       }
 
-      if (!["available", "occupied"].includes(statusInput.value)) {
-        showScheduleMessage(`Slot ${slotNumber}: invalid status.`, true);
+      if (startTime < "07:00" || endTime > "20:00") {
+        showScheduleMessage(
+          `Slot ${slotNumber}: time must be between 7:00 AM and 8:00 PM.`,
+          true,
+        );
         return;
       }
 
@@ -909,11 +1033,11 @@ if (dayScheduleForm) {
         slot_number: slotNumber,
         start_time: startTime,
         end_time: endTime,
-        status: statusInput.value,
+        status: "available",
       });
     }
 
-    // Check for overlapping schedules.
+    // Check for overlapping time slots.
     const sortedSchedules = [...schedules].sort(function (a, b) {
       return a.start_time.localeCompare(b.start_time);
     });
@@ -946,9 +1070,6 @@ if (dayScheduleForm) {
       const response = await fetch("save_room_schedule.php", {
         method: "POST",
         body: formData,
-        headers: {
-          Accept: "application/json",
-        },
       });
 
       const data = await readJSON(response);
@@ -957,7 +1078,7 @@ if (dayScheduleForm) {
 
       setScheduleScreen("days");
 
-      showScheduleMessage(
+      showToast(
         data.message || `${currentScheduleDay} schedule saved successfully.`,
       );
     } catch (error) {
@@ -984,31 +1105,7 @@ if (roomSearchInput) {
 }
 
 /* =========================
-   BUILDING TAB EVENTS
-========================= */
-
-document.querySelectorAll(".building-tab").forEach(function (tab) {
-  tab.addEventListener("click", function () {
-    selectBuilding(tab.dataset.building);
-  });
-});
-
-/* =========================
-   MODAL BUTTON EVENTS
-========================= */
-
-const addRoomOpenButton = document.querySelector(
-  '[data-modal-open="addRoomModal"]',
-);
-
-if (addRoomOpenButton) {
-  addRoomOpenButton.addEventListener("click", function () {
-    openModal("addRoomModal");
-  });
-}
-
-/* =========================
-   ESCAPE KEY
+   CLOSE MODALS WITH ESCAPE
 ========================= */
 
 document.addEventListener("keydown", function (event) {
@@ -1018,9 +1115,9 @@ document.addEventListener("keydown", function (event) {
   closeModal("scheduleModal");
 });
 
-/* =====================================================
+/* =========================
    INITIALIZE PAGE
-===================================================== */
+========================= */
 
 document.addEventListener("DOMContentLoaded", function () {
   showTodayDate();
@@ -1029,9 +1126,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (activeTab && activeTab.dataset.building) {
     currentBuilding = activeTab.dataset.building.toUpperCase();
+  } else {
+    selectBuilding("A");
   }
-
-  selectBuilding(currentBuilding);
 
   loadRooms();
 });

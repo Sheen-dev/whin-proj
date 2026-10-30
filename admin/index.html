@@ -97,6 +97,7 @@
     ========================== -->
     <div id="addRoomModal" class="modal" aria-hidden="true">
         <div class="modal-content small-modal" role="dialog" aria-modal="true" aria-labelledby="addRoomTitle">
+
             <button class="close-btn" type="button" aria-label="Close dialog" onclick="closeModal('addRoomModal')">
                 &times;
             </button>
@@ -128,6 +129,7 @@
          EDIT ROOM SCHEDULE MODAL
     ========================== -->
     <div id="scheduleModal" class="modal" aria-hidden="true">
+
         <div class="modal-content schedule-editor-modal" role="dialog" aria-modal="true"
             aria-labelledby="scheduleTitle">
 
@@ -185,12 +187,17 @@
                 <form id="dayScheduleForm">
 
                     <div id="dayScheduleFields" class="day-schedule-fields">
-                        <!-- JavaScript generates three schedule sections here -->
+                        <!-- JavaScript dynamically generates schedule slots here -->
                     </div>
 
-                    <p id="scheduleSaveMessage" class="schedule-save-message" role="status" aria-live="polite"></p>
+                    <button type="button" id="addScheduleSlotBtn" class="add-slot-btn">
+                        <span aria-hidden="true">+</span>
+                        Add Slot
+                    </button>
 
                     <div class="schedule-modal-footer">
+                        <p id="scheduleSaveMessage" class="schedule-save-message" role="status" aria-live="polite"></p>
+
                         <button type="submit" id="saveDayScheduleBtn" class="save-btn">
                             Save Schedule
                         </button>
