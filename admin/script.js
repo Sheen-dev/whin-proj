@@ -26,25 +26,10 @@ const DAYS = [
 
 const DEFAULT_SCHEDULES = [
   {
-    slot_number: 1,
     start_time: "07:00",
-    end_time: "10:00",
-    status: "available",
-  },
-  {
-    slot_number: 2,
-    start_time: "10:00",
-    end_time: "13:00",
-    status: "available",
-  },
-  {
-    slot_number: 3,
-    start_time: "13:00",
-    end_time: "16:00",
-    status: "available",
+    end_time: "08:00",
   },
 ];
-
 /* =========================
    DOM HELPERS
 ========================= */
@@ -714,7 +699,10 @@ function createScheduleSlotHTML(slot, index) {
           Time Slot ${number}
         </h4>
 
-        <span class="schedule-available-badge">Available</span>
+       <span class="schedule-available-badge">
+    <span class="schedule-available-dot"></span>
+    Available
+</span>
 
         <button
           class="delete-slot-btn"
@@ -729,22 +717,26 @@ function createScheduleSlotHTML(slot, index) {
       <div class="schedule-input-grid">
         <div class="form-group">
           <label for="slot${number}Start">Start Time</label>
-          <input
-            id="slot${number}Start"
-            name="start_time_${number}"
-            type="time"
-            value="${escapeHTML(slot.start_time)}"
-            required>
+<input
+  id="slot${number}Start"
+  name="start_time_${number}"
+  type="time"
+  min="07:00"
+  max="20:00"
+  value="${escapeHTML(slot.start_time)}"
+  required>
         </div>
 
         <div class="form-group">
           <label for="slot${number}End">End Time</label>
-          <input
-            id="slot${number}End"
-            name="end_time_${number}"
-            type="time"
-            value="${escapeHTML(slot.end_time)}"
-            required>
+         <input
+  id="slot${number}End"
+  name="end_time_${number}"
+  type="time"
+  min="07:00"
+  max="20:00"
+  value="${escapeHTML(slot.end_time)}"
+  required>
         </div>
       </div>
 

@@ -87,17 +87,34 @@ foreach ($schedules as $schedule) {
     }
 
     // Only allow schedules between 7:00 AM and 8:00 PM.
-    if (
-        $start < "07:00" ||
-        $end > "20:00" ||
-        $start >= $end
-    ) {
-        respond(
-            false,
-            "Times must be between 7:00 AM and 8:00 PM, with the end after the start.",
-            400
-        );
-    }
+    // Convert times into minutes for accurate validation.
+[$startHour, $startMinute] = array_map('intval', explode(':', $start));
+[$endHour, $endMinute] = array_map('intval', explode(':', $end));
+
+$startMinutes = ($startHour * 60) + $startMinute;
+$endMinutes = ($endHour * 60) + $endMinute;
+
+// Reject empty default values.
+if ($start === "00:00" && $end === "00:00") {
+    respond(
+        false,
+        "Please set a valid start time and end time before saving.",
+        400
+    );
+}
+
+// Operating hours: 7:00 AM to 8:00 PM.
+if (
+    $startMinutes < 420 ||
+    $endMinutes > 1200 ||
+    $startMinutes >= $endMinutes
+) {
+    respond(
+        false,
+        "Schedules must be between 7:00 AM and 8:00 PM. The end time must be after the start time.",
+        400
+    );
+}
 
     // Always force the status to available.
     $cleanSchedules[] = [
