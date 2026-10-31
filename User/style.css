@@ -437,3 +437,34 @@
   }
 }
 
+/* =========================================
+   ROOM CARD — COMPACT AVAILABLE TIMES
+   ========================================= */
+
+.room-schedule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  min-width: 0;
+  font-size: 9px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.room-schedule-item > span:first-child {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 600;
+  color: #71717a;
+}
+
+.room-schedule-item > span:last-child {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 600;
+  color: #3f3f46;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
