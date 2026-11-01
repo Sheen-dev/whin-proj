@@ -171,6 +171,11 @@ function renderAnimatedH3(text) {
    ========================================= */
 
 function navigateTo(viewId) {
+  // Logged-out users can only see the login page.
+  if (!state.currentUser && viewId !== "login-view") {
+    viewId = "login-view";
+  }
+
   document.querySelectorAll(".view-panel").forEach((panel) => {
     panel.classList.add("hidden");
     panel.classList.remove("flex");
@@ -484,15 +489,22 @@ async function restoreLoginSession() {
     if (data.success && data.user) {
       state.currentUser = data.user;
       updateLoggedInInterface(data.user);
+
+      // Already logged in: go to the home page.
+      navigateTo("home-view");
     } else {
       state.currentUser = null;
       updateLoggedOutInterface();
+
+      // Not logged in: stay on the login page.
+      navigateTo("login-view");
     }
   } catch (error) {
     console.error("Session restoration error:", error);
 
     state.currentUser = null;
     updateLoggedOutInterface();
+    navigateTo("login-view");
   }
 }
 
@@ -1026,7 +1038,7 @@ async function handleLogout() {
 
     alert("You have been logged out.");
 
-    navigateTo("home-view");
+    navigateTo("login-view");
   } catch (error) {
     console.error("Logout error:", error);
     alert("Unable to log out. Please try again.");
