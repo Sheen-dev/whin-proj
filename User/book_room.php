@@ -1,15 +1,21 @@
 <?php
 session_start();
+
 date_default_timezone_set("Asia/Manila");
+
+header("Content-Type: application/json; charset=UTF-8");
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 
 require_once __DIR__ . "/../admin/db.php";
 
 function respond($success, $message, $statusCode = 200) {
     http_response_code($statusCode);
+
     echo json_encode([
         "success" => $success,
         "message" => $message
     ]);
+
     exit;
 }
 
@@ -17,12 +23,15 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     respond(false, "Invalid request method.", 405);
 }
 
-// The user must be logged in.
 if (!isset($_SESSION["user"])) {
     respond(false, "Please log in first.", 401);
 }
 
-$data = json_decode(file_get_contents("php://input"), true) ?? [];
+$data = json_decode(file_get_contents("php://input"), true);
+
+if (!is_array($data)) {
+    respond(false, "Invalid booking data.", 400);
+}
 
 $roomId = filter_var($data["room_id"] ?? null, FILTER_VALIDATE_INT);
 $start = $data["start_time"] ?? "";
@@ -35,7 +44,8 @@ if (!$roomId || $roomId < 1) {
 $timePattern = '/^(?:[01]\d|2[0-3]):[0-5]\d$/';
 
 if (
-    !is_string($start) || !is_string($end) ||
+    !is_string($start) ||
+    !is_string($end) ||
     !preg_match($timePattern, $start) ||
     !preg_match($timePattern, $end)
 ) {
@@ -45,8 +55,8 @@ if (
 [$startHour, $startMinute] = array_map("intval", explode(":", $start));
 [$endHour, $endMinute] = array_map("intval", explode(":", $end));
 
-$startMinutes = $startHour * 60 + $startMinute;
-$endMinutes = $endHour * 60 + $endMinute;
+$startMinutes = ($startHour * 60) + $startMinute;
+$endMinutes = ($endHour * 60) + $endMinute;
 
 if ($endMinutes <= $startMinutes) {
     respond(false, "Time Out must be later than Time In.", 400);
@@ -54,7 +64,7 @@ if ($endMinutes <= $startMinutes) {
 
 $today = date("Y-m-d");
 $dayName = date("l");
-$nowMinutes = (int) date("G") * 60 + (int) date("i");
+$nowMinutes = ((int) date("G") * 60) + (int) date("i");
 
 if ($endMinutes <= $nowMinutes) {
     respond(false, "That time has already passed.", 400);
@@ -63,8 +73,12 @@ if ($endMinutes <= $nowMinutes) {
 $startSql = $start . ":00";
 $endSql = $end . ":00";
 
-$userId = $_SESSION["user"]["user_id"];
-$userRole = $_SESSION["user"]["role"];
+$userId = $_SESSION["user"]["user_id"] ?? null;
+$userRole = $_SESSION["user"]["role"] ?? null;
+
+if (!$userId || !$userRole) {
+    respond(false, "Your login session is incomplete. Please log in again.", 401);
+}
 
 try {
     $pdo->beginTransaction();
@@ -73,31 +87,37 @@ try {
     $roomQuery = $pdo->prepare("SELECT id FROM rooms WHERE id = ? FOR UPDATE");
     $roomQuery->execute([$roomId]);
 
-    if (!$roomQuery->fetch()) {
+    if (!$roomQuery->fetch(PDO::FETCH_ASSOC)) {
         $pdo->rollBack();
         respond(false, "Room not found.", 404);
     }
 
-    // The booking must fit inside an available schedule slot today.
+    // The booking must be inside ONE available time set by the admin.
+    // Any minute inside that time is allowed (for example 5:40 to 6:20).
     $slotQuery = $pdo->prepare("
-        SELECT id
+        SELECT start_time, end_time
         FROM room_schedules
         WHERE room_id = ?
           AND day_of_week = ?
           AND status = 'available'
           AND start_time <= ?
           AND end_time >= ?
+        ORDER BY start_time
         LIMIT 1
+        FOR UPDATE
     ");
     $slotQuery->execute([$roomId, $dayName, $startSql, $endSql]);
 
-    if (!$slotQuery->fetch()) {
+    $slot = $slotQuery->fetch(PDO::FETCH_ASSOC);
+
+    if (!$slot) {
         $pdo->rollBack();
-        respond(false, "This room is not available at that time today.", 409);
+        respond(false, "That time is not inside an available time of this room today.", 409);
     }
 
-    // The booking must not overlap another booking.
-    $overlapQuery = $pdo->prepare("
+    // If anyone already booked ANY part of this available time,
+    // the whole available time is taken.
+    $takenQuery = $pdo->prepare("
         SELECT id
         FROM bookings
         WHERE room_id = ?
@@ -105,12 +125,18 @@ try {
           AND start_time < ?
           AND end_time > ?
         LIMIT 1
+        FOR UPDATE
     ");
-    $overlapQuery->execute([$roomId, $today, $endSql, $startSql]);
+    $takenQuery->execute([
+        $roomId,
+        $today,
+        $slot["end_time"],
+        $slot["start_time"]
+    ]);
 
-    if ($overlapQuery->fetch()) {
+    if ($takenQuery->fetch(PDO::FETCH_ASSOC)) {
         $pdo->rollBack();
-        respond(false, "Sorry, that time is already booked.", 409);
+        respond(false, "Sorry, that available time has already been booked.", 409);
     }
 
     $insert = $pdo->prepare("

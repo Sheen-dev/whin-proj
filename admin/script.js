@@ -14,6 +14,7 @@ let currentBuilding = "A";
 let currentRoomId = null;
 let currentRoomNumber = "";
 let currentScheduleDay = "";
+let adminBookings = [];
 
 const DAYS = [
   "Monday",
@@ -134,6 +135,7 @@ function closeModal(modalId) {
   const modal = getElement(modalId);
 
   if (modal) {
+    modal.classList.remove("show");
     modal.style.display = "none";
   }
 }
@@ -470,6 +472,369 @@ if (roomGrid) {
 }
 
 /* =========================
+   ADMIN TABS
+========================= */
+
+function showAdminView(viewId) {
+  document.querySelectorAll(".admin-view").forEach(function (view) {
+    view.hidden = view.id !== viewId;
+  });
+
+  document.querySelectorAll(".admin-main-tab").forEach(function (button) {
+    const active = button.dataset.adminView === viewId;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+
+  const addRoomButton = document.querySelector(".add-room-btn");
+  if (addRoomButton && addRoomButton.id !== "openAddUserBtn") {
+    addRoomButton.hidden = viewId !== "roomsView";
+  }
+
+  if (viewId === "usersView") {
+    loadAdminUsers();
+  }
+
+  if (viewId === "bookedView") {
+    loadAdminBookings();
+  }
+}
+
+function setUserPanel(panelId) {
+  document.querySelectorAll(".users-table-panel").forEach(function (panel) {
+    panel.hidden = panel.id !== panelId;
+  });
+
+  document.querySelectorAll(".users-subtab").forEach(function (button) {
+    button.classList.toggle("active", button.dataset.userPanel === panelId);
+  });
+}
+
+function renderUserTable(bodyId, users, role) {
+  const body = getElement(bodyId);
+  if (!body) return;
+
+  if (!users.length) {
+    body.innerHTML = `<tr><td colspan="6" class="table-empty">No ${role === "STUDENT" ? "student" : "professor"} accounts found.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = users
+    .map(function (user, index) {
+      const userId = escapeHTML(user.user_id);
+      const name = escapeHTML(user.full_name);
+      const program = escapeHTML(
+        role === "STUDENT" ? user.course : user.department,
+      );
+      const roleLabel = role === "STUDENT" ? "Student" : "Professor";
+
+      return `
+      <tr>
+        <td class="row-number">${index + 1}</td>
+        <td class="user-name-cell">${name}</td>
+        <td><span class="table-id">${userId}</span></td>
+        <td>${program || "—"}</td>
+        <td><span class="role-pill ${role.toLowerCase()}">${roleLabel}</span></td>
+        <td>
+          <button type="button" class="table-delete-btn"
+            data-action="delete-user"
+            data-user-role="${role}"
+            data-user-id="${userId}"
+            data-user-name="${name}">
+            Delete
+          </button>
+        </td>
+      </tr>
+    `;
+    })
+    .join("");
+}
+
+async function loadAdminUsers() {
+  const studentBody = getElement("studentsTableBody");
+  const professorBody = getElement("professorsTableBody");
+
+  if (studentBody)
+    studentBody.innerHTML =
+      '<tr><td colspan="6" class="table-empty">Loading students...</td></tr>';
+  if (professorBody)
+    professorBody.innerHTML =
+      '<tr><td colspan="6" class="table-empty">Loading professors...</td></tr>';
+
+  try {
+    const response = await fetch("get_users.php", {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    const data = await readJSON(response);
+
+    renderUserTable("studentsTableBody", data.students || [], "STUDENT");
+    renderUserTable("professorsTableBody", data.professors || [], "PROFESSOR");
+  } catch (error) {
+    console.error("Could not load user accounts:", error);
+    if (studentBody)
+      studentBody.innerHTML = `<tr><td colspan="6" class="table-error">${escapeHTML(error.message)}</td></tr>`;
+    if (professorBody)
+      professorBody.innerHTML = `<tr><td colspan="6" class="table-error">${escapeHTML(error.message)}</td></tr>`;
+  }
+}
+
+function formatAdminTime(value) {
+  const time = String(value || "").slice(0, 5);
+  if (!/^\d{2}:\d{2}$/.test(time)) return "—";
+
+  let [hour, minute] = time.split(":").map(Number);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return `${hour}:${String(minute).padStart(2, "0")} ${suffix}`;
+}
+
+function renderAdminBookings(bookings) {
+  const body = getElement("bookingsTableBody");
+  if (!body) return;
+
+  if (!bookings.length) {
+    body.innerHTML =
+      '<tr><td colspan="8" class="table-empty">No bookings have been recorded yet.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = bookings
+    .map(function (booking, index) {
+      const room = booking.room_number
+        ? `Room ${escapeHTML(booking.room_number)} · Building ${escapeHTML(booking.building_code || "")}`
+        : "Room unavailable";
+
+      return `
+      <tr>
+        <td class="row-number">${index + 1}</td>
+        <td class="user-name-cell">${escapeHTML(booking.full_name)}</td>
+        <td><span class="table-id">${escapeHTML(booking.user_id)}</span></td>
+        <td>${escapeHTML(booking.program || "—")}</td>
+        <td><span class="role-pill ${String(booking.user_role).toLowerCase() === "student" ? "student" : "professor"}">${escapeHTML(booking.user_role)}</span></td>
+        <td>${room}</td>
+        <td>${escapeHTML(booking.booking_date)}</td>
+        <td class="booking-time-cell">${formatAdminTime(booking.start_time)} – ${formatAdminTime(booking.end_time)}</td>
+      </tr>
+    `;
+    })
+    .join("");
+}
+
+async function loadAdminBookings() {
+  const body = getElement("bookingsTableBody");
+  if (body)
+    body.innerHTML =
+      '<tr><td colspan="8" class="table-empty">Loading booking history...</td></tr>';
+
+  try {
+    const response = await fetch("get_bookings.php", {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    const data = await readJSON(response);
+
+    adminBookings = Array.isArray(data.bookings) ? data.bookings : [];
+    renderAdminBookings(adminBookings);
+    return adminBookings;
+  } catch (error) {
+    console.error("Could not load booking history:", error);
+    if (body)
+      body.innerHTML = `<tr><td colspan="8" class="table-error">${escapeHTML(error.message)}</td></tr>`;
+    adminBookings = [];
+    return [];
+  }
+}
+
+function getPHTDateParts() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "long",
+  }).formatToParts(new Date());
+
+  const values = {};
+  parts.forEach((part) => {
+    values[part.type] = part.value;
+  });
+
+  return {
+    date: `${values.year}-${values.month}-${values.day}`,
+    weekday: values.weekday,
+  };
+}
+
+function applyBookingStatus(day, slots) {
+  // get_room_schedule.php recalculates and saves status from today's bookings.
+  // Keep that database status instead of overriding it in the browser.
+  return slots.map(function (slot) {
+    return {
+      ...slot,
+      status: String(slot.status || "available").toLowerCase(),
+    };
+  });
+}
+
+/* =========================
+   USER CREATE / DELETE ACTIONS
+========================= */
+
+function openAddUserModal() {
+  const form = getElement("addUserForm");
+  const modal = getElement("addUserModal");
+
+  if (form) form.reset();
+  updateAddUserLabels();
+
+  if (modal) {
+    modal.style.display = "flex";
+    const nameInput = getElement("newUserName");
+    if (nameInput) nameInput.focus();
+  }
+}
+
+function updateAddUserLabels() {
+  const role = getElement("newUserRole")?.value || "STUDENT";
+  const isStudent = role === "STUDENT";
+
+  const idLabel = getElement("newUserIdLabel");
+  const programLabel = getElement("newUserProgramLabel");
+  const levelLabel = getElement("newUserLevelLabel");
+  const idInput = getElement("newUserId");
+  const programInput = getElement("newUserProgram");
+  const levelInput = getElement("newUserLevel");
+
+  if (idLabel) idLabel.textContent = isStudent ? "Student ID" : "Professor ID";
+  if (programLabel)
+    programLabel.textContent = isStudent ? "Course" : "Department";
+  if (levelLabel)
+    levelLabel.textContent = isStudent ? "Year Level" : "Designation";
+
+  if (idInput) {
+    idInput.placeholder = isStudent ? "e.g. 24175832" : "e.g. TCH-8821";
+    idInput.maxLength = 20; // students.student_id / professors.professor_id
+  }
+
+  if (programInput) {
+    programInput.placeholder = isStudent
+      ? "e.g. BSIT"
+      : "e.g. Information Technology";
+    programInput.maxLength = 100; // course / department
+  }
+
+  if (levelInput) {
+    levelInput.placeholder = isStudent ? "e.g. 3rd Year" : "e.g. Instructor";
+    levelInput.maxLength = isStudent ? 30 : 50; // year_level / designation
+  }
+}
+
+async function deleteUserAccount(role, userId, fullName) {
+  const roleLabel = role === "STUDENT" ? "student" : "professor";
+  const confirmed = confirm(
+    `Delete ${roleLabel} account for ${fullName} (${userId})?\n\nThis cannot be undone. Existing booking records will remain in the booking history.`,
+  );
+
+  if (!confirmed) return;
+
+  const formData = new FormData();
+  formData.append("user_role", role);
+  formData.append("user_id", userId);
+
+  try {
+    const response = await fetch("delete_user.php", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await readJSON(response);
+    showToast(data.message || "User account deleted.");
+    await loadAdminUsers();
+  } catch (error) {
+    console.error("Could not delete user:", error);
+    alert(error.message || "Unable to delete user.");
+  }
+}
+
+const mainAdminTabs = document.querySelectorAll(".admin-main-tab");
+mainAdminTabs.forEach(function (button) {
+  button.addEventListener("click", function () {
+    showAdminView(button.dataset.adminView);
+  });
+});
+
+document.querySelectorAll(".users-subtab").forEach(function (button) {
+  button.addEventListener("click", function () {
+    setUserPanel(button.dataset.userPanel);
+  });
+});
+
+const openAddUserButton = getElement("openAddUserBtn");
+if (openAddUserButton) {
+  openAddUserButton.addEventListener("click", openAddUserModal);
+}
+
+const newUserRoleSelect = getElement("newUserRole");
+if (newUserRoleSelect) {
+  newUserRoleSelect.addEventListener("change", updateAddUserLabels);
+}
+
+const refreshBookingsButton = getElement("refreshBookingsBtn");
+if (refreshBookingsButton) {
+  refreshBookingsButton.addEventListener("click", loadAdminBookings);
+}
+
+document.addEventListener("click", function (event) {
+  const deleteButton = event.target.closest(
+    'button[data-action="delete-user"]',
+  );
+  if (!deleteButton) return;
+
+  deleteUserAccount(
+    deleteButton.dataset.userRole,
+    deleteButton.dataset.userId,
+    deleteButton.dataset.userName,
+  );
+});
+
+const addUserForm = getElement("addUserForm");
+if (addUserForm) {
+  addUserForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const saveButton = getElement("saveNewUserBtn");
+    const formData = new FormData(addUserForm);
+
+    try {
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent = "Adding...";
+      }
+
+      const response = await fetch("add_user.php", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await readJSON(response);
+
+      closeModal("addUserModal");
+      addUserForm.reset();
+      updateAddUserLabels();
+      showToast(data.message || "User account added.");
+      await loadAdminUsers();
+    } catch (error) {
+      console.error("Could not add user:", error);
+      alert(error.message || "Unable to add user.");
+    } finally {
+      if (saveButton) {
+        saveButton.disabled = false;
+        saveButton.textContent = "Add User";
+      }
+    }
+  });
+}
+
+/* =========================
    SCHEDULE MODAL
 ========================= */
 
@@ -587,13 +952,16 @@ async function fetchDaySchedule(day) {
 
   // Use default slots only when no saved slots exist.
   if (scheduleList.length === 0) {
-    return DEFAULT_SCHEDULES.map(function (slot) {
-      return { ...slot };
-    });
+    return applyBookingStatus(
+      day,
+      DEFAULT_SCHEDULES.map(function (slot, index) {
+        return { ...slot, slot_number: index + 1, status: "available" };
+      }),
+    );
   }
 
-  // Keep every saved slot, not just the first three.
-  return scheduleList.map(function (slot, index) {
+  // Preserve every saved slot and calculate its current booking status.
+  const normalizedSlots = scheduleList.map(function (slot, index) {
     return {
       slot_number: index + 1,
       start_time: normalizeTime(slot.start_time),
@@ -601,6 +969,8 @@ async function fetchDaySchedule(day) {
       status: "available",
     };
   });
+
+  return applyBookingStatus(day, normalizedSlots);
 }
 
 /* =========================
@@ -615,6 +985,7 @@ async function renderScheduleDays() {
   list.innerHTML = '<div class="loading-state">Loading schedule...</div>';
 
   try {
+    await loadAdminBookings();
     const dayResults = await Promise.all(
       DAYS.map(async function (day) {
         try {
@@ -635,12 +1006,13 @@ async function renderScheduleDays() {
 
     list.innerHTML = dayResults
       .map(function (item) {
-        const slotCount = item.slots.length;
-
+        const availableCount = item.slots.filter(
+          (slot) => String(slot.status).toLowerCase() !== "occupied",
+        ).length;
+        const occupiedCount = item.slots.length - availableCount;
         const statusText =
-          slotCount === 1
-            ? "1 available time slot"
-            : `${slotCount} available time slots`;
+          `${availableCount} available` +
+          (occupiedCount ? ` · ${occupiedCount} occupied` : "");
 
         return `
           <div class="schedule-day-card">
@@ -689,6 +1061,10 @@ if (scheduleDaysList) {
 
 function createScheduleSlotHTML(slot, index) {
   const number = index + 1;
+  const isOccupied = String(slot.status || "").toLowerCase() === "occupied";
+  const statusBadge = isOccupied
+    ? `<span class="schedule-occupied-badge"><span class="schedule-occupied-dot"></span>Occupied</span>`
+    : `<span class="schedule-available-badge"><span class="schedule-available-dot"></span>Available</span>`;
 
   return `
     <section class="schedule-slot-card">
@@ -699,17 +1075,15 @@ function createScheduleSlotHTML(slot, index) {
           Time Slot ${number}
         </h4>
 
-       <span class="schedule-available-badge">
-    <span class="schedule-available-dot"></span>
-    Available
-</span>
+        ${statusBadge}
 
         <button
           class="delete-slot-btn"
           type="button"
           data-action="delete-slot"
           aria-label="Delete time slot ${number}"
-          title="Delete this slot">
+          title="${isOccupied ? "This slot has a booking and cannot be deleted" : "Delete this slot"}"
+          ${isOccupied ? "disabled" : ""}>
           &times;
         </button>
       </div>
@@ -724,6 +1098,7 @@ function createScheduleSlotHTML(slot, index) {
   min="07:00"
   max="20:00"
   value="${escapeHTML(slot.start_time)}"
+  ${isOccupied ? "disabled" : ""}
   required>
         </div>
 
@@ -736,6 +1111,7 @@ function createScheduleSlotHTML(slot, index) {
   min="07:00"
   max="20:00"
   value="${escapeHTML(slot.end_time)}"
+  ${isOccupied ? "disabled" : ""}
   required>
         </div>
       </div>
@@ -1123,4 +1499,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   loadRooms();
+  loadAdminUsers();
+  loadAdminBookings();
 });
+

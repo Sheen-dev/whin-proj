@@ -881,66 +881,115 @@
         class="hidden fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm items-center justify-center p-4"
         onclick="if (event.target === this) closeBookingModal()">
 
-        <div class="bg-white rounded-[2rem] w-full max-w-md p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-[2rem] w-full max-w-lg p-5 sm:p-7 shadow-2xl max-h-[92vh] overflow-y-auto">
 
-            <div class="flex items-start justify-between mb-5">
+            <div class="flex items-start justify-between mb-6">
                 <div>
-                    <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-plmun-green">Book a Room</p>
-                    <h3 id="booking-title" class="text-2xl font-extrabold text-zinc-900">Room</h3>
+                    <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-plmun-green">Room Reservation</p>
+                    <h3 id="booking-title" class="text-2xl font-extrabold text-zinc-900 mt-1">Room</h3>
+                    <p class="text-xs text-zinc-500 mt-1">Choose the free time you need.</p>
                 </div>
-                <button type="button" onclick="closeBookingModal()"
-                    class="w-9 h-9 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600">✕</button>
+                <button type="button" onclick="closeBookingModal()" aria-label="Close booking window"
+                    class="w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">✕</button>
             </div>
 
-            <!-- 1. Available time (radio buttons) -->
-            <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2">1. Choose available time</p>
-            <div id="booking-slots" class="space-y-2 mb-5"></div>
+            <section class="mb-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <span
+                        class="w-6 h-6 rounded-full bg-plmun-green text-white text-xs font-bold grid place-items-center">1</span>
+                    <p class="text-sm font-bold text-zinc-800">Choose an available time</p>
+                </div>
+                <div id="booking-slots" class="space-y-2"></div>
+            </section>
 
-            <!-- Shows after a slot is selected -->
-            <div id="booking-details" class="hidden space-y-4">
+            <div id="booking-details" class="hidden space-y-5">
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <p class="text-[10px] font-bold tracking-[0.16em] uppercase text-emerald-700">Available window
+                        selected</p>
+                    <p id="booking-selected-window" class="mt-1 text-base font-extrabold text-emerald-900">—</p>
+                    <p class="mt-1 text-xs leading-relaxed text-emerald-800">You can book part of this time. Any unused
+                        portion will remain available to other users.</p>
+                </div>
 
-                <!-- 2. Hours dropdown -->
-                <div>
-                    <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2">
-                        2. How many hours?
-                    </label>
+                <section>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span
+                            class="w-6 h-6 rounded-full bg-plmun-green text-white text-xs font-bold grid place-items-center">2</span>
+                        <div>
+                            <p class="text-sm font-bold text-zinc-800">Set your booking duration</p>
+                            <p class="text-xs text-zinc-500">Choose from 30 minutes up to 4 hours.</p>
+                        </div>
+                    </div>
+                    <label for="booking-hours" class="sr-only">Booking duration</label>
                     <select id="booking-hours" onchange="applyHours()"
-                        class="w-full border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-plmun-green"></select>
-                </div>
+                        class="w-full appearance-none border border-zinc-200 bg-white rounded-xl px-4 py-3.5 text-sm font-semibold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-plmun-green">
+                        <option value="">Choose a duration</option>
+                    </select>
+                </section>
 
-                <!-- 3. Time in and time out -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2">Time
-                            In</label>
-                        <input type="time" id="booking-time-in" oninput="updatePreferred()"
-                            class="w-full border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-plmun-green">
+                <section>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span
+                            class="w-6 h-6 rounded-full bg-plmun-green text-white text-xs font-bold grid place-items-center">3</span>
+                        <div>
+                            <p class="text-sm font-bold text-zinc-800">Review your booking time</p>
+                            <p class="text-xs text-zinc-500">Time Out is calculated automatically. You can edit either
+                                time.</p>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500 mb-2">Time
-                            Out</label>
-                        <input type="time" id="booking-time-out" oninput="updatePreferred()"
-                            class="w-full border border-zinc-200 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-plmun-green">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div
+                            class="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 focus-within:border-plmun-green focus-within:ring-2 focus-within:ring-emerald-100">
+                            <label for="booking-time-in"
+                                class="block text-[10px] font-bold tracking-[0.14em] uppercase text-zinc-500 mb-2">Time
+                                In · Start</label>
+                            <input type="time" id="booking-time-in" step="60" oninput="handleTimeInChange()"
+                                class="w-full min-w-0 bg-transparent text-xl font-extrabold text-zinc-900 outline-none">
+                            <p class="mt-1.5 text-[11px] text-zinc-500">When you need the room.</p>
+                        </div>
+
+                        <div
+                            class="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 focus-within:border-plmun-green focus-within:ring-2 focus-within:ring-emerald-100">
+                            <label for="booking-time-out"
+                                class="block text-[10px] font-bold tracking-[0.14em] uppercase text-zinc-500 mb-2">Time
+                                Out · End</label>
+                            <input type="time" id="booking-time-out" step="60" oninput="updatePreferred()"
+                                class="w-full min-w-0 bg-transparent text-xl font-extrabold text-zinc-900 outline-none">
+                            <p class="mt-1.5 text-[11px] text-zinc-500">Auto-filled; change if needed.</p>
+                        </div>
                     </div>
+
+                    <button type="button" onclick="resetBookingTimes()"
+                        class="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-plmun-green hover:text-emerald-800 transition-colors">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        Use suggested time again
+                    </button>
+                </section>
+
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4" aria-live="polite">
+                    <div class="flex items-center gap-2 text-emerald-700">
+                        <i class="fa-solid fa-calendar-check"></i>
+                        <p class="text-[10px] font-bold tracking-[0.16em] uppercase">Booking summary</p>
+                    </div>
+                    <p id="booking-preferred" class="mt-2 text-lg sm:text-xl font-extrabold text-plmun-green">—</p>
+                    <p class="mt-1 text-xs text-emerald-800">Only this selected interval will be reserved.</p>
                 </div>
 
-                <!-- 4. Preferred time -->
-                <div class="rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3">
-                    <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-emerald-700">Preferred Time</p>
-                    <p id="booking-preferred" class="text-lg font-bold text-plmun-green">—</p>
-                </div>
-
-                <p id="booking-error" class="hidden text-sm text-red-600"></p>
+                <p id="booking-error"
+                    class="hidden rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700"
+                    role="alert"></p>
             </div>
 
             <button id="booking-submit" type="button" onclick="submitBooking()" disabled
-                class="mt-5 w-full bg-plmun-green hover:bg-plmun-lightgreen disabled:bg-zinc-300 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-full py-3 transition-all">
-                Book
+                class="mt-5 w-full bg-plmun-green hover:bg-plmun-lightgreen disabled:bg-zinc-300 disabled:cursor-not-allowed text-white font-bold text-sm rounded-full py-3.5 transition-all">
+                Confirm Booking
             </button>
+            <p class="mt-3 text-center text-[11px] text-zinc-400">Your reservation is checked again before it is saved.
+            </p>
 
         </div>
     </div>
-
 </body>
 
 </html>

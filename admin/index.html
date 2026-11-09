@@ -29,72 +29,249 @@
 
     <main class="admin-content">
 
-        <!-- ROOM STATISTICS -->
-        <section class="admin-stats">
-            <div class="stat-card">
-                <span>Total Rooms</span>
-                <strong id="totalRooms">0</strong>
+        <!-- MAIN ADMIN TABS -->
+        <nav class="admin-main-tabs" aria-label="Admin sections">
+            <button type="button" class="admin-main-tab active" data-admin-view="roomsView">Rooms</button>
+            <button type="button" class="admin-main-tab" data-admin-view="usersView">Users</button>
+            <button type="button" class="admin-main-tab" data-admin-view="bookedView">Booked</button>
+        </nav>
+
+        <section id="roomsView" class="admin-view">
+
+            <!-- ROOM STATISTICS -->
+            <section class="admin-stats">
+                <div class="stat-card">
+                    <span>Total Rooms</span>
+                    <strong id="totalRooms">0</strong>
+                </div>
+
+                <div class="stat-card">
+                    <span>Available</span>
+                    <strong id="availableRooms">0</strong>
+                </div>
+
+                <div class="stat-card">
+                    <span>Unavailable</span>
+                    <strong id="unavailableRooms">0</strong>
+                </div>
+            </section>
+
+            <!-- BUILDING SELECTION -->
+            <section class="building-section">
+                <div class="section-header">
+                    <div>
+                        <h2>Buildings</h2>
+                        <p>Select a building to manage its rooms.</p>
+                    </div>
+                </div>
+
+                <div class="building-tabs">
+                    <button class="building-tab active" type="button" data-building="A" onclick="selectBuilding('A')">
+                        Building A
+                    </button>
+
+                    <button class="building-tab" type="button" data-building="B" onclick="selectBuilding('B')">
+                        Building B
+                    </button>
+
+                    <button class="building-tab" type="button" data-building="C" onclick="selectBuilding('C')">
+                        Building C
+                    </button>
+                </div>
+            </section>
+
+            <!-- ROOMS SECTION -->
+            <section class="rooms-section">
+                <div class="section-header">
+                    <div>
+                        <h2 id="buildingTitle">Building A Rooms</h2>
+                        <p>Manage the rooms assigned to this building.</p>
+                    </div>
+
+                    <label class="search-box" for="roomSearch">
+                        <span aria-hidden="true">⌕</span>
+                        <input type="search" id="roomSearch" placeholder="Search room number" oninput="searchRooms()">
+                    </label>
+                </div>
+
+                <div id="adminRoomGrid" class="admin-room-grid">
+                    <p>Loading rooms...</p>
+                </div>
+            </section>
+
+        </section><!-- /roomsView -->
+
+        <!-- USERS VIEW -->
+        <section id="usersView" class="admin-view" hidden>
+            <div class="section-header users-page-heading">
+                <div>
+                    <h2>User Management</h2>
+                    <p>Manage student and professor accounts.</p>
+                </div>
+                <button type="button" class="add-room-btn" id="openAddUserBtn">+ Add User</button>
             </div>
 
-            <div class="stat-card">
-                <span>Available</span>
-                <strong id="availableRooms">0</strong>
+            <div class="users-subtabs" aria-label="User account types">
+                <button type="button" class="users-subtab active" data-user-panel="studentsPanel">Students</button>
+                <button type="button" class="users-subtab" data-user-panel="professorsPanel">Professors</button>
             </div>
 
-            <div class="stat-card">
-                <span>Unavailable</span>
-                <strong id="unavailableRooms">0</strong>
-            </div>
+            <section id="studentsPanel" class="users-table-panel">
+                <div class="table-section-heading">
+                    <div>
+                        <h3>Student Accounts</h3>
+                        <p>Registered student information.</p>
+                    </div>
+                </div>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Name</th>
+                                <th>Student ID</th>
+                                <th>Course</th>
+                                <th>Role</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="studentsTableBody">
+                            <tr>
+                                <td colspan="6" class="table-empty">Loading students...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="professorsPanel" class="users-table-panel" hidden>
+                <div class="table-section-heading">
+                    <div>
+                        <h3>Professor Accounts</h3>
+                        <p>Registered professor information.</p>
+                    </div>
+                </div>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Name</th>
+                                <th>Professor ID</th>
+                                <th>Department</th>
+                                <th>Role</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="professorsTableBody">
+                            <tr>
+                                <td colspan="6" class="table-empty">Loading professors...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </section>
 
-        <!-- BUILDING SELECTION -->
-        <section class="building-section">
+        <!-- BOOKED VIEW -->
+        <section id="bookedView" class="admin-view" hidden>
             <div class="section-header">
                 <div>
-                    <h2>Buildings</h2>
-                    <p>Select a building to manage its rooms.</p>
+                    <h2>Booked History</h2>
+                    <p>Every booking is shown as a separate record.</p>
+                    <p class="bookings-clear-note">
+                        Clearing history permanently deletes all booking records.
+                        Room schedules and user accounts are kept.
+                    </p>
+                </div>
+
+                <div class="booking-history-actions"
+                    style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+
+                    <button type="button" class="danger-btn" id="clearBookingsBtn"
+                        style="padding:10px 16px; cursor:pointer;" onclick="clearBookingHistory()">
+                        Clear History
+                    </button>
+
+                    <button type="button" class="secondary-btn refresh-table-btn" id="refreshBookingsBtn">
+                        Refresh
+                    </button>
+
                 </div>
             </div>
 
-            <div class="building-tabs">
-                <button class="building-tab active" type="button" data-building="A" onclick="selectBuilding('A')">
-                    Building A
-                </button>
+            <div class="admin-table-wrap">
+                <table class="admin-table bookings-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>User</th>
+                            <th>User ID</th>
+                            <th>Course / Department</th>
+                            <th>Role</th>
+                            <th>Room</th>
+                            <th>Date</th>
+                            <th>Booked Time</th>
+                        </tr>
+                    </thead>
 
-                <button class="building-tab" type="button" data-building="B" onclick="selectBuilding('B')">
-                    Building B
-                </button>
-
-                <button class="building-tab" type="button" data-building="C" onclick="selectBuilding('C')">
-                    Building C
-                </button>
-            </div>
-        </section>
-
-        <!-- ROOMS SECTION -->
-        <section class="rooms-section">
-            <div class="section-header">
-                <div>
-                    <h2 id="buildingTitle">Building A Rooms</h2>
-                    <p>Manage the rooms assigned to this building.</p>
-                </div>
-
-                <label class="search-box" for="roomSearch">
-                    <span aria-hidden="true">⌕</span>
-                    <input type="search" id="roomSearch" placeholder="Search room number" oninput="searchRooms()">
-                </label>
-            </div>
-
-            <div id="adminRoomGrid" class="admin-room-grid">
-                <p>Loading rooms...</p>
+                    <tbody id="bookingsTableBody">
+                        <tr>
+                            <td colspan="8" class="table-empty">Loading bookings...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </section>
 
     </main>
 
-    <!-- =========================
-         ADD ROOM MODAL
-    ========================== -->
+    <!-- ADD USER MODAL -->
+    <div id="addUserModal" class="modal" aria-hidden="true">
+        <div class="modal-content user-modal-content" role="dialog" aria-modal="true" aria-labelledby="addUserTitle">
+            <button class="close-btn" type="button" aria-label="Close dialog"
+                onclick="closeModal('addUserModal')">&times;</button>
+
+            <p class="modal-label">USER MANAGEMENT</p>
+            <h2 id="addUserTitle">Add User Account</h2>
+
+            <form id="addUserForm" class="user-form">
+                <label for="newUserRole">Account Type</label>
+                <select id="newUserRole" name="user_role" required>
+                    <option value="STUDENT">Student</option>
+                    <option value="PROFESSOR">Professor</option>
+                </select>
+
+                <label for="newUserName">Full Name</label>
+                <input type="text" id="newUserName" name="full_name" maxlength="150" placeholder="Enter full name"
+                    required>
+
+                <label for="newUserId" id="newUserIdLabel">Student ID</label>
+                <input type="text" id="newUserId" name="user_id" maxlength="20" placeholder="Enter student ID" required>
+
+                <label for="newUserProgram" id="newUserProgramLabel">Course</label>
+                <input type="text" id="newUserProgram" name="program" maxlength="100" placeholder="e.g. BSIT" required>
+
+                <label for="newUserAge">Age</label>
+                <input type="number" id="newUserAge" name="age" min="16" max="100" required>
+
+                <label for="newUserLevel" id="newUserLevelLabel">Year Level</label>
+                <input type="text" id="newUserLevel" name="level" maxlength="30" placeholder="e.g. 3rd Year" required>
+
+                <label for="newUserPassword">Initial Password</label>
+                <input type="password" id="newUserPassword" name="password" minlength="8" autocomplete="new-password"
+                    required>
+
+                <button type="submit" class="save-btn" id="saveNewUserBtn">Add User</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADD ROOM MODAL -->
     <div id="addRoomModal" class="modal" aria-hidden="true">
         <div class="modal-content small-modal" role="dialog" aria-modal="true" aria-labelledby="addRoomTitle">
 
@@ -107,11 +284,9 @@
 
             <form id="addRoomForm">
                 <label for="newRoomNumber">Room Number</label>
-
                 <input type="text" id="newRoomNumber" placeholder="e.g. 107" maxlength="20" required>
 
                 <label for="newRoomBuilding">Building</label>
-
                 <select id="newRoomBuilding" required>
                     <option value="A">Building A</option>
                     <option value="B">Building B</option>
@@ -125,23 +300,17 @@
         </div>
     </div>
 
-    <!-- =========================
-         EDIT ROOM SCHEDULE MODAL
-    ========================== -->
+    <!-- EDIT ROOM SCHEDULE MODAL -->
     <div id="scheduleModal" class="modal" aria-hidden="true">
-
         <div class="modal-content schedule-editor-modal" role="dialog" aria-modal="true"
             aria-labelledby="scheduleTitle">
 
             <!-- SCREEN 1: SELECT A DAY -->
             <section id="scheduleDaysScreen">
-
                 <div class="schedule-modal-header">
                     <div>
                         <p class="modal-label">ROOM MANAGEMENT</p>
-
                         <h2 id="scheduleTitle">Room 100</h2>
-
                         <p class="schedule-subtitle">
                             Choose a day to edit its schedule.
                         </p>
@@ -156,16 +325,12 @@
                 <div id="scheduleDaysList" class="schedule-days-list">
                     <!-- JavaScript generates Monday-Saturday here -->
                 </div>
-
             </section>
 
             <!-- SCREEN 2: EDIT THE SELECTED DAY -->
             <section id="scheduleEditScreen" hidden>
-
                 <div class="schedule-modal-header">
-
                     <div class="schedule-edit-heading">
-
                         <button type="button" class="schedule-back-btn" onclick="backToScheduleDays()">
                             &larr; Back
                         </button>
@@ -174,18 +339,15 @@
                             <p class="modal-label">EDIT ROOM SCHEDULE</p>
                             <h2 id="scheduleDayTitle">Monday</h2>
                         </div>
-
                     </div>
 
                     <button type="button" class="close-btn" onclick="closeModal('scheduleModal')"
                         aria-label="Close schedule">
                         &times;
                     </button>
-
                 </div>
 
                 <form id="dayScheduleForm">
-
                     <div id="dayScheduleFields" class="day-schedule-fields">
                         <!-- JavaScript dynamically generates schedule slots here -->
                     </div>
@@ -202,9 +364,7 @@
                             Save Schedule
                         </button>
                     </div>
-
                 </form>
-
             </section>
 
         </div>
@@ -212,6 +372,91 @@
 
     <!-- LOAD JAVASCRIPT AFTER ALL HTML ELEMENTS -->
     <script src="script.js"></script>
+
+    <!-- CLEAR BOOKING HISTORY -->
+    <script>
+        async function clearBookingHistory() {
+
+            const confirmed = window.confirm(
+                "Are you sure you want to permanently delete ALL booking history?\n\nThis cannot be undone. Room schedules and user accounts will remain."
+            );
+
+            if (!confirmed) return;
+
+            // Second confirmation prevents accidental clearing.
+            const typedConfirmation = window.prompt(
+                "Type CLEAR to confirm deleting all booking history:"
+            );
+
+            if (typedConfirmation !== "CLEAR") {
+                if (typedConfirmation !== null) {
+                    window.alert("Confirmation did not match. No bookings were deleted.");
+                }
+
+                return;
+            }
+
+            const button = document.getElementById("clearBookingsBtn");
+            const formData = new FormData();
+
+            formData.append("confirmation", "CLEAR");
+
+            if (button) {
+                button.disabled = true;
+                button.textContent = "Clearing...";
+            }
+
+            try {
+                const response = await fetch("clear_bookings.php", {
+                    method: "POST",
+                    body: formData,
+                    cache: "no-store"
+                });
+
+                const responseText = await response.text();
+
+                let data;
+
+                try {
+                    data = JSON.parse(responseText);
+                } catch (error) {
+                    throw new Error(
+                        "The server returned an invalid response. Check clear_bookings.php for PHP errors."
+                    );
+                }
+
+                if (!response.ok || !data.success) {
+                    throw new Error(
+                        data.message || "Unable to clear booking history."
+                    );
+                }
+
+                // Refresh the Booked table after successful deletion.
+                if (typeof loadAdminBookings === "function") {
+                    await loadAdminBookings();
+                }
+
+                if (typeof showToast === "function") {
+                    showToast(data.message || "Booking history cleared.");
+                } else {
+                    window.alert(data.message || "Booking history cleared.");
+                }
+
+            } catch (error) {
+                console.error("Clear booking history error:", error);
+
+                window.alert(
+                    error.message || "Unable to clear booking history."
+                );
+
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = "Clear History";
+                }
+            }
+        }
+    </script>
 
 </body>
 

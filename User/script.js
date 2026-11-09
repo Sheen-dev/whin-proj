@@ -299,22 +299,29 @@ async function loadRooms() {
       }),
     );
 
-    // Load today's bookings so booked times can be removed.
+    // Load today's bookings so booked intervals can be removed.
     try {
       const bookingResponse = await fetch("get_bookings.php", {
         credentials: "same-origin",
         cache: "no-store",
       });
 
+      if (!bookingResponse.ok) {
+        throw new Error("Unable to load today's bookings.");
+      }
+
       const bookingData = await bookingResponse.json();
 
-      state.bookings =
-        bookingData.success && Array.isArray(bookingData.bookings)
-          ? bookingData.bookings
-          : [];
+      if (!bookingData.success || !Array.isArray(bookingData.bookings)) {
+        throw new Error(bookingData.message || "Unable to load bookings.");
+      }
+
+      state.bookings = bookingData.bookings;
     } catch (error) {
       console.error("Bookings error:", error);
-      state.bookings = [];
+
+      // Do not show rooms as available when booking information failed.
+      throw error;
     }
 
     state.rooms = roomsWithSchedules;
@@ -331,7 +338,7 @@ async function loadRooms() {
 
     showMessage(
       roomContainer,
-      "Unable to load rooms. Please check your database connection and admin API.",
+      "Unable to load rooms or booking information. Please check your connection.",
     );
 
     updateStatistics(0, 0);
@@ -376,64 +383,48 @@ function timeToMinutes(time) {
 function minutesToInput(minutes) {
   const h = String(Math.floor(minutes / 60)).padStart(2, "0");
   const m = String(minutes % 60).padStart(2, "0");
+
   return `${h}:${m}`;
 }
+
+/* =========================================
+   GET REMAINING AVAILABLE TIMES
+   ========================================= */
 
 function getTodayAvailableSchedules(room) {
   const now = getPhilippineTimeParts();
 
-  // Today's booked times for this room, earliest first.
-  const bookedTimes = (state.bookings || [])
+  // User/get_bookings.php returns bookings for today's date only.
+  const roomBookings = (state.bookings || [])
     .filter((item) => Number(item.room_id) === Number(room.id))
     .map((item) => ({
       start: timeToMinutes(item.start_time),
       end: timeToMinutes(item.end_time),
-    }))
-    .sort((a, b) => a.start - b.start);
+    }));
 
-  // Makes a smaller copy of a schedule with new start and end times.
-  function makePiece(schedule, startMinutes, endMinutes) {
-    return {
-      ...schedule,
-      start_time: minutesToInput(startMinutes) + ":00",
-      end_time: minutesToInput(endMinutes) + ":00",
-    };
-  }
+  return (room.schedules || [])
+    .filter((schedule) => {
+      const sameDay =
+        String(schedule.day_of_week).toLowerCase() === now.day.toLowerCase();
 
-  const freePieces = [];
+      const isAvailable =
+        String(schedule.status || "")
+          .trim()
+          .toLowerCase() === "available";
 
-  (room.schedules || []).forEach((schedule) => {
-    const sameDay =
-      String(schedule.day_of_week).toLowerCase() === now.day.toLowerCase();
+      const slotStart = timeToMinutes(schedule.start_time);
+      const slotEnd = timeToMinutes(schedule.end_time);
 
-    const isAvailable =
-      String(schedule.status || "")
-        .trim()
-        .toLowerCase() === "available";
+      const hasNotEnded = slotEnd > now.minutes;
 
-    if (!sameDay || !isAvailable) return;
+      // If anyone booked ANY part of this time, the whole time is removed
+      // from the room card. No smaller leftover time is shown.
+      const isBooked = roomBookings.some(
+        (booked) => booked.start < slotEnd && booked.end > slotStart,
+      );
 
-    let cursor = timeToMinutes(schedule.start_time);
-    const slotEnd = timeToMinutes(schedule.end_time);
-
-    // Cut every booking out of the ribbon.
-    bookedTimes.forEach((booked) => {
-      if (booked.end <= cursor || booked.start >= slotEnd) return;
-
-      if (booked.start > cursor) {
-        freePieces.push(makePiece(schedule, cursor, booked.start));
-      }
-
-      cursor = Math.max(cursor, booked.end);
-    });
-
-    if (cursor < slotEnd) {
-      freePieces.push(makePiece(schedule, cursor, slotEnd));
-    }
-  });
-
-  return freePieces
-    .filter((piece) => timeToMinutes(piece.end_time) > now.minutes)
+      return sameDay && isAvailable && hasNotEnded && !isBooked;
+    })
     .sort((a, b) => timeToMinutes(a.start_time) - timeToMinutes(b.start_time));
 }
 
@@ -499,6 +490,7 @@ async function restoreLoginSession() {
     }
   } catch (error) {
     console.error("Session restoration error:", error);
+
     state.currentUser = null;
     updateLoggedOutInterface();
   }
@@ -523,7 +515,6 @@ function updateLoggedInInterface(user) {
   const roleLabel = isStudent ? "Student Account" : "Professor Account";
   const idLabel = isStudent ? "Student Number" : "Professor ID";
 
-  // Update navigation button
   if (navAuthButton) {
     navAuthButton.innerHTML = `
       <button
@@ -536,7 +527,6 @@ function updateLoggedInInterface(user) {
     `;
   }
 
-  // Update profile header
   if (accountId) {
     accountId.textContent = user.full_name || user.user_id;
   }
@@ -545,13 +535,11 @@ function updateLoggedInInterface(user) {
     accountRole.textContent = roleLabel;
   }
 
-  // Keep the CSS status classes
   if (accountStatus) {
     accountStatus.textContent = "Logged In";
     accountStatus.className = "account-status logged-in";
   }
 
-  // Build personal information cards
   if (accountDetails) {
     const details = [
       ["Full Name", user.full_name, "fa-user"],
@@ -659,7 +647,7 @@ function renderRooms() {
     return;
   }
 
-  // Show only rooms that have an available time today.
+  // Only rooms with an available time today are shown.
   const visibleRooms = state.rooms.filter(
     (room) => getRoomStatus(room).available,
   );
@@ -676,18 +664,17 @@ function renderRooms() {
     const roomNumber = escapeHTML(room.room_number);
     const buildingName = escapeHTML(room.building_name);
 
-    const scheduleHTML = roomStatus.schedules.length
-      ? roomStatus.schedules
-          .map(
-            (schedule) => `
-              <div class="room-schedule-item">
-                <span>${escapeHTML(schedule.day_of_week)}</span>
-                <span>${escapeHTML(formatSchedule(schedule))}</span>
-              </div>
-            `,
-          )
-          .join("")
-      : `<p class="text-xs text-zinc-400">No available schedule today.</p>`;
+    // Only available (not booked) admin times are listed.
+    const scheduleHTML = roomStatus.schedules
+      .map(
+        (schedule) => `
+          <div class="room-schedule-item">
+            <span>${escapeHTML(schedule.day_of_week)}</span>
+            <span>${escapeHTML(formatSchedule(schedule))}</span>
+          </div>
+        `,
+      )
+      .join("");
 
     const card = document.createElement("div");
 
@@ -701,11 +688,7 @@ function renderRooms() {
             ${buildingName}
           </span>
 
-          <span class="w-2.5 h-2.5 rounded-full ${
-            roomStatus.available
-              ? "bg-emerald-500 shadow-[0_0_8px_#10B981]"
-              : "bg-red-500"
-          }"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10B981]"></span>
         </div>
 
         <h5 class="text-xl font-bold text-zinc-900 group-hover:text-plmun-green transition-colors">
@@ -718,21 +701,14 @@ function renderRooms() {
       </div>
 
       <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between gap-2">
-        <span class="${
-          roomStatus.available ? "text-emerald-600" : "text-red-500"
-        } text-xs font-semibold">
-          ${escapeHTML(roomStatus.label)}
+        <span class="text-emerald-600 text-xs font-semibold">
+          Available
         </span>
 
         <button
           type="button"
           onclick="bookRoom(${Number(room.id)})"
-          ${roomStatus.available ? "" : "disabled"}
-          class="${
-            roomStatus.available
-              ? "bg-plmun-green hover:bg-plmun-lightgreen cursor-pointer"
-              : "bg-zinc-300 cursor-not-allowed"
-          } text-white px-4 py-1.5 rounded-full font-semibold text-[11px] transition-all">
+          class="bg-plmun-green hover:bg-plmun-lightgreen cursor-pointer text-white px-4 py-1.5 rounded-full font-semibold text-[11px] transition-all">
           Book
         </button>
       </div>
@@ -806,24 +782,29 @@ function executeSearch() {
   container.innerHTML = "";
 
   const matchingRooms = state.rooms.filter((room) => {
-    if (!getRoomStatus(room).available) return false;
+    const availableSchedules = getTodayAvailableSchedules(room);
+
+    if (availableSchedules.length === 0) return false;
 
     const roomNumber = String(room.room_number).toLowerCase();
-
     const buildingText = String(room.building_name || "").toLowerCase();
 
-    const schedulesText = (room.schedules || [])
+    const schedulesText = availableSchedules
       .map((schedule) =>
         [
           schedule.day_of_week,
           schedule.start_time,
           schedule.end_time,
           formatSchedule(schedule),
-          schedule.status,
         ].join(" "),
       )
       .join(" ")
       .toLowerCase();
+
+    // Numeric searches match room numbers only.
+    if (/^\d+$/.test(query)) {
+      return roomNumber.includes(query);
+    }
 
     return (
       roomNumber.includes(query) ||
@@ -834,27 +815,21 @@ function executeSearch() {
   });
 
   if (matchingRooms.length === 0) {
-    showMessage(container, "No matching classroom schedules found.");
+    showMessage(container, "No matching available classroom times found.");
   } else {
     matchingRooms.forEach((room) => {
-      const roomStatus = getRoomStatus(room);
+      const availableSchedules = getTodayAvailableSchedules(room);
 
-      const scheduleHTML = roomStatus.schedules.length
-        ? roomStatus.schedules
-            .map(
-              (schedule) => `
-                <div class="room-schedule-item">
-                  <span>${escapeHTML(schedule.day_of_week)}</span>
-                  <span>${escapeHTML(formatSchedule(schedule))}</span>
-                </div>
-              `,
-            )
-            .join("")
-        : `<p class="text-xs text-zinc-400">No available schedule today.</p>`;
-
-      const statusClass = roomStatus.available
-        ? "bg-emerald-100 text-emerald-700"
-        : "bg-red-100 text-red-600";
+      const scheduleHTML = availableSchedules
+        .map(
+          (schedule) => `
+            <div class="room-schedule-item">
+              <span>${escapeHTML(schedule.day_of_week)}</span>
+              <span>${escapeHTML(formatSchedule(schedule))}</span>
+            </div>
+          `,
+        )
+        .join("");
 
       const card = document.createElement("div");
 
@@ -868,8 +843,8 @@ function executeSearch() {
               ${escapeHTML(room.building_name)}
             </span>
 
-            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${statusClass}">
-              ${escapeHTML(roomStatus.label)}
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-emerald-100 text-emerald-700">
+              Available
             </span>
           </div>
 
@@ -886,12 +861,7 @@ function executeSearch() {
           <button
             type="button"
             onclick="bookRoom(${Number(room.id)})"
-            ${roomStatus.available ? "" : "disabled"}
-            class="${
-              roomStatus.available
-                ? "bg-plmun-green hover:bg-plmun-lightgreen cursor-pointer"
-                : "bg-zinc-300 cursor-not-allowed"
-            } text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all">
+            class="bg-plmun-green hover:bg-plmun-lightgreen text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all">
             Book
           </button>
         </div>
@@ -946,7 +916,6 @@ function showLoginError(message) {
   document.querySelectorAll(".login-input").forEach((input) => {
     input.classList.remove("input-error");
 
-    // Restart the shake animation.
     void input.offsetWidth;
 
     input.classList.add("input-error");
@@ -1087,18 +1056,18 @@ function renderHistory() {
       "flex items-center justify-between p-4 rounded-2xl bg-white border border-zinc-200/80 text-sm shadow-sm gap-4";
 
     row.innerHTML = `
-            <div class="flex items-center gap-3">
-                <i class="fa-solid fa-bolt text-plmun-green"></i>
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-bolt text-plmun-green"></i>
 
-                <span class="text-zinc-700 font-medium">
-                    ${escapeHTML(item.action)}
-                </span>
-            </div>
+        <span class="text-zinc-700 font-medium">
+          ${escapeHTML(item.action)}
+        </span>
+      </div>
 
-            <span class="text-xs font-mono text-zinc-400 whitespace-nowrap">
-                ${escapeHTML(item.time)}
-            </span>
-        `;
+      <span class="text-xs font-mono text-zinc-400 whitespace-nowrap">
+        ${escapeHTML(item.time)}
+      </span>
+    `;
 
     container.appendChild(row);
   });
@@ -1108,7 +1077,23 @@ function renderHistory() {
    BOOKING WINDOW
    ========================================= */
 
-const booking = { room: null, slots: [], slot: null };
+const booking = {
+  room: null,
+  slots: [],
+  slot: null,
+};
+
+function formatDuration(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts = [];
+
+  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "hr" : "hrs"}`);
+  if (minutes > 0) parts.push(`${minutes} ${minutes === 1 ? "min" : "mins"}`);
+
+  return parts.join(" ") || "0 mins";
+}
 
 function bookRoom(roomId) {
   if (!state.currentUser) {
@@ -1118,14 +1103,20 @@ function bookRoom(roomId) {
   }
 
   const room = state.rooms.find((item) => Number(item.id) === Number(roomId));
-  if (!room) return alert("Room not found.");
 
-  const roomStatus = getRoomStatus(room);
-  if (!roomStatus.available) {
-    return alert("This room has no available schedule today.");
+  if (!room) {
+    alert("Room not found.");
+    return;
   }
 
-  openBookingModal(room, roomStatus.schedules);
+  const availableSchedules = getTodayAvailableSchedules(room);
+
+  if (availableSchedules.length === 0) {
+    alert("This room has no available time today.");
+    return;
+  }
+
+  openBookingModal(room, availableSchedules);
 }
 
 function openBookingModal(room, schedules) {
@@ -1136,99 +1127,271 @@ function openBookingModal(room, schedules) {
   getElement("booking-title").textContent =
     `Room ${room.room_number} — ${room.building_name}`;
 
+  // 1. Available times (radio buttons)
   getElement("booking-slots").innerHTML = schedules
     .map(
       (schedule, index) => `
-        <label class="flex items-center gap-3 p-3 rounded-2xl border border-zinc-200 hover:border-plmun-green cursor-pointer">
-          <input type="radio" name="booking-slot" value="${index}"
-            onchange="selectSlot(${index})" class="accent-emerald-700">
-          <span class="text-sm font-semibold text-zinc-800">
-            ${escapeHTML(formatSchedule(schedule))}
+        <label class="flex items-center gap-3 p-3 rounded-2xl border border-zinc-200 hover:border-plmun-green hover:bg-emerald-50/50 cursor-pointer transition-colors">
+          <input type="radio"
+            name="booking-slot"
+            value="${index}"
+            onchange="selectSlot(${index})"
+            class="w-4 h-4 accent-emerald-700">
+
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-semibold text-zinc-800">
+              ${escapeHTML(formatSchedule(schedule))}
+            </span>
+
+            <span class="block mt-0.5 text-xs text-emerald-700">
+              Available time
+            </span>
           </span>
         </label>
       `,
     )
     .join("");
 
-  getElement("booking-details").classList.add("hidden");
+  const details = getElement("booking-details");
+
+  details.classList.add("hidden");
+
+  details.innerHTML = `
+    <div id="booking-controls" class="space-y-4">
+
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <p class="text-[10px] font-bold tracking-[0.16em] uppercase text-emerald-700">
+          Available time selected
+        </p>
+
+        <p id="booking-selected-window"
+          class="mt-1 text-base font-extrabold text-emerald-900">
+          —
+        </p>
+
+        <p class="mt-1 text-xs text-emerald-800">
+          After booking, this whole available time is marked as booked.
+        </p>
+      </div>
+
+      <div>
+        <label for="booking-hours"
+          class="block text-sm font-bold text-zinc-800 mb-2">
+          How long do you need the room?
+        </label>
+
+        <select id="booking-hours"
+          onchange="applyHours()"
+          class="w-full border border-zinc-200 bg-white rounded-xl px-4 py-3 text-sm font-semibold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-plmun-green">
+        </select>
+
+        <p class="mt-1.5 text-xs text-zinc-500">
+          Pick a duration, then change Time In and Time Out if you want an exact time.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+        <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 focus-within:border-plmun-green focus-within:ring-2 focus-within:ring-emerald-100">
+          <label for="booking-time-in"
+            class="block text-[10px] font-bold tracking-[0.14em] uppercase text-zinc-500 mb-2">
+            Time In
+          </label>
+
+          <input type="time"
+            id="booking-time-in"
+            oninput="handleTimeChange()"
+            class="w-full min-w-0 bg-transparent text-xl font-extrabold text-zinc-900 outline-none">
+        </div>
+
+        <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 focus-within:border-plmun-green focus-within:ring-2 focus-within:ring-emerald-100">
+          <label for="booking-time-out"
+            class="block text-[10px] font-bold tracking-[0.14em] uppercase text-zinc-500 mb-2">
+            Time Out
+          </label>
+
+          <input type="time"
+            id="booking-time-out"
+            oninput="handleTimeChange()"
+            class="w-full min-w-0 bg-transparent text-xl font-extrabold text-zinc-900 outline-none">
+        </div>
+
+      </div>
+
+      <button type="button"
+        onclick="resetBookingTimes()"
+        class="inline-flex items-center gap-2 text-xs font-semibold text-plmun-green hover:text-emerald-800 transition-colors">
+        <i class="fa-solid fa-rotate-left"></i>
+        Use suggested time again
+      </button>
+
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4"
+        aria-live="polite">
+        <div class="flex items-center gap-2 text-emerald-700">
+          <i class="fa-solid fa-calendar-check"></i>
+          <p class="text-[10px] font-bold tracking-[0.16em] uppercase">
+            Preferred time
+          </p>
+        </div>
+
+        <p id="booking-preferred"
+          class="mt-2 text-lg sm:text-xl font-extrabold text-plmun-green">
+          —
+        </p>
+      </div>
+
+      <p id="booking-error"
+        class="hidden rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700"
+        role="alert">
+      </p>
+
+    </div>
+  `;
+
   getElement("booking-submit").disabled = true;
+  getElement("booking-submit").textContent = "Book";
 
   const modal = getElement("booking-modal");
+
   modal.classList.remove("hidden");
   modal.classList.add("flex");
 }
 
 function closeBookingModal() {
   const modal = getElement("booking-modal");
+
   modal.classList.add("hidden");
   modal.classList.remove("flex");
+
+  booking.slot = null;
+}
+
+// Builds the "how long" dropdown: 30 mins, 1 hr, 1 hr 30 mins ...
+// up to the length of the selected available time.
+function setDurationOptions(slotLength, selectedMinutes) {
+  const select = getElement("booking-hours");
+
+  let options = '<option value="">Custom time</option>';
+
+  for (let minutes = 30; minutes <= slotLength; minutes += 30) {
+    options += `<option value="${minutes}">${formatDuration(minutes)}</option>`;
+  }
+
+  select.innerHTML = options;
+
+  const exists = Array.from(select.options).some(
+    (option) => option.value === String(selectedMinutes),
+  );
+
+  select.value = exists ? String(selectedMinutes) : "";
+}
+
+// Suggested duration: 1 hour if it fits, otherwise the longest that fits.
+function getSuggestedMinutes(slotLength) {
+  return Math.min(60, Math.floor(slotLength / 30) * 30);
 }
 
 function selectSlot(index) {
   const slot = booking.slots[index];
+
+  if (!slot) return;
+
   booking.slot = slot;
 
-  const start = timeToMinutes(slot.start_time);
-  const end = timeToMinutes(slot.end_time);
-  const maxHours = Math.floor((end - start) / 60);
+  const slotStart = timeToMinutes(slot.start_time);
+  const slotEnd = timeToMinutes(slot.end_time);
 
-  let options = "";
-  for (let h = 1; h <= maxHours; h++) {
-    options += `<option value="${h}">${h} hour${h > 1 ? "s" : ""}</option>`;
-  }
-  if (maxHours < 1) {
-    options = `<option value="0">Less than 1 hour</option>`;
-  }
-  getElement("booking-hours").innerHTML = options;
+  getElement("booking-selected-window").textContent = formatSchedule(slot);
 
   const timeIn = getElement("booking-time-in");
   const timeOut = getElement("booking-time-out");
-  timeIn.min = timeOut.min = minutesToInput(start);
-  timeIn.max = timeOut.max = minutesToInput(end);
+
+  timeIn.min = timeOut.min = minutesToInput(slotStart);
+  timeIn.max = timeOut.max = minutesToInput(slotEnd);
 
   getElement("booking-details").classList.remove("hidden");
+
+  setDurationOptions(
+    slotEnd - slotStart,
+    getSuggestedMinutes(slotEnd - slotStart),
+  );
+
   applyHours();
 }
 
+// When the duration changes, Time In goes to the start of the
+// available time and Time Out is calculated.
 function applyHours() {
   if (!booking.slot) return;
 
-  const start = timeToMinutes(booking.slot.start_time);
-  const end = timeToMinutes(booking.slot.end_time);
-  const hours = Number(getElement("booking-hours").value);
+  const slotStart = timeToMinutes(booking.slot.start_time);
+  const slotEnd = timeToMinutes(booking.slot.end_time);
 
-  const out = hours > 0 ? start + hours * 60 : end;
+  const minutes = Number(getElement("booking-hours").value);
 
-  getElement("booking-time-in").value = minutesToInput(start);
-  getElement("booking-time-out").value = minutesToInput(out);
+  getElement("booking-time-in").value = minutesToInput(slotStart);
+  getElement("booking-time-out").value = minutesToInput(
+    minutes > 0 ? slotStart + minutes : slotEnd,
+  );
 
   updatePreferred();
 }
 
-function updatePreferred() {
-  if (!booking.slot) return;
-
-  const start = timeToMinutes(booking.slot.start_time);
-  const end = timeToMinutes(booking.slot.end_time);
-
+// Time In and Time Out can be edited freely (any minute).
+function handleTimeChange() {
   const timeIn = getElement("booking-time-in").value;
   const timeOut = getElement("booking-time-out").value;
+  const select = getElement("booking-hours");
 
+  if (timeIn && timeOut) {
+    const duration = timeToMinutes(timeOut) - timeToMinutes(timeIn);
+
+    const listed = Array.from(select.options).some(
+      (option) => option.value === String(duration),
+    );
+
+    select.value = listed ? String(duration) : "";
+  }
+
+  updatePreferred();
+}
+
+function resetBookingTimes() {
+  if (!booking.slot) return;
+
+  const slotLength =
+    timeToMinutes(booking.slot.end_time) -
+    timeToMinutes(booking.slot.start_time);
+
+  setDurationOptions(slotLength, getSuggestedMinutes(slotLength));
+
+  applyHours();
+}
+
+function updatePreferred() {
   const preferred = getElement("booking-preferred");
   const error = getElement("booking-error");
   const submit = getElement("booking-submit");
 
+  if (!booking.slot || !preferred || !error || !submit) return;
+
+  const slotStart = timeToMinutes(booking.slot.start_time);
+  const slotEnd = timeToMinutes(booking.slot.end_time);
+
+  const timeInValue = getElement("booking-time-in").value;
+  const timeOutValue = getElement("booking-time-out").value;
+
   let message = "";
 
-  if (!timeIn || !timeOut) {
+  if (!timeInValue || !timeOutValue) {
     message = "Please set both Time In and Time Out.";
   } else {
-    const a = timeToMinutes(timeIn);
-    const b = timeToMinutes(timeOut);
+    const start = timeToMinutes(timeInValue);
+    const end = timeToMinutes(timeOutValue);
 
-    if (a < start || b > end) {
+    if (start < slotStart || end > slotEnd) {
       message = `Please stay inside ${formatSchedule(booking.slot)}.`;
-    } else if (b <= a) {
+    } else if (end <= start) {
       message = "Time Out must be later than Time In.";
     }
   }
@@ -1236,22 +1399,36 @@ function updatePreferred() {
   if (message) {
     error.textContent = message;
     error.classList.remove("hidden");
+
     preferred.textContent = "—";
+
     submit.disabled = true;
     return;
   }
 
   error.classList.add("hidden");
-  preferred.textContent = `${formatTime(timeIn)} to ${formatTime(timeOut)}`;
+  error.textContent = "";
+
+  const minutes = timeToMinutes(timeOutValue) - timeToMinutes(timeInValue);
+
+  preferred.textContent =
+    `${formatTime(timeInValue)} – ${formatTime(timeOutValue)} ` +
+    `(${formatDuration(minutes)})`;
+
   submit.disabled = false;
 }
 
 async function submitBooking() {
   if (!booking.room || !booking.slot) return;
 
+  updatePreferred();
+
+  const submit = getElement("booking-submit");
+
+  if (submit.disabled) return;
+
   const timeIn = getElement("booking-time-in").value;
   const timeOut = getElement("booking-time-out").value;
-  const submit = getElement("booking-submit");
 
   submit.disabled = true;
   submit.textContent = "Booking...";
@@ -1259,8 +1436,11 @@ async function submitBooking() {
   try {
     const response = await fetch("book_room.php", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       credentials: "same-origin",
+      cache: "no-store",
       body: JSON.stringify({
         room_id: booking.room.id,
         start_time: timeIn,
@@ -1280,15 +1460,23 @@ async function submitBooking() {
       `${formatTime(timeIn)} to ${formatTime(timeOut)}`;
 
     addHistory(`Booked ${summary}`);
+
     closeBookingModal();
+
+    // Reload so the booked time is removed from the room card.
     await loadRooms();
+
     alert(`Booking saved!\n\n${summary}`);
   } catch (error) {
     console.error("Booking error:", error);
+
     alert("Unable to connect. Please try again.");
   } finally {
     submit.textContent = "Book";
-    updatePreferred();
+
+    if (booking.slot) {
+      updatePreferred();
+    }
   }
 }
 
